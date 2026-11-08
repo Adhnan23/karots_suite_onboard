@@ -36,11 +36,11 @@ Future<ListImport> importSupplierList(Db db, CatalogSupplier sup, String text) a
     } else {
       final p = r.product..offers = [offer];
       final key = p.allCodes.isNotEmpty ? p.allCodes.first : normName(p.name);
-      if (await db.addReview(
+      final added = await db.addReview(
         ReviewItem(shopUid: 'supplier:${sup.uid}', kind: 'product', data: p.toJson()),
         key: key,
-      ))
-        review++;
+      );
+      if (added) review++;
     }
   }
   return ListImport(matched, review);
