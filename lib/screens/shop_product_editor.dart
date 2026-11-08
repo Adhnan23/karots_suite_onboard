@@ -114,6 +114,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
         await pushUpdate(app.db, c, s, d);
         if (mounted) toast(context, '${p.name} changed in ${s.name}');
       }
+      if (c != null) app.pushed(s);
       if (mounted) Navigator.pop(context, true);
     } on PushError catch (e) {
       if (!mounted) return;

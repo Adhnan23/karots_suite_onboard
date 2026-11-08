@@ -36,6 +36,7 @@ class _AlternativesScreenState extends State<AlternativesScreen> {
     final ok = await guard(context, () => c.createAlternative(name, tier, ids));
     if (ok != null) {
       await refresh();
+      if (mounted) AppScope.of(context).pushed(s);
       if (mounted) toast(context, '“$name” made in ${s.name}');
     }
   }

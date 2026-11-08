@@ -80,16 +80,16 @@ void main() {
       expect(form.firstWhere((x) => x['key'] == f['key'])['value'], 'Testamol');
 
       // Its batches: read, then fix one's count, expiry and price.
-    var st = await productStock(c, r.productId);
-    expect(st.lots.length, 2);
-    final second = st.lots.firstWhere((l) => l.expiry == '2028-06-30');
-    await editLot(c, r.productId, st, second, count: '7', expiry: '2028-09-30', price: '57');
-    st = await productStock(c, r.productId);
-    final fixed = st.lots.firstWhere((l) => l.id == second.id);
-    expect((fixed.qty, fixed.expiry, fixed.price), ('7', '2028-09-30', '57.00'));
-    expect(st.total, '13');
+      var st = await productStock(c, r.productId);
+      expect(st.lots.length, 2);
+      final second = st.lots.firstWhere((l) => l.expiry == '2028-06-30');
+      await editLot(c, r.productId, st, second, count: '7', expiry: '2028-09-30', price: '57');
+      st = await productStock(c, r.productId);
+      final fixed = st.lots.firstWhere((l) => l.id == second.id);
+      expect((fixed.qty, fixed.expiry, fixed.price), ('7', '2028-09-30', '57.00'));
+      expect(st.total, '13');
 
-    // Change it.
+      // Change it.
       await pushUpdate(
         db,
         c,

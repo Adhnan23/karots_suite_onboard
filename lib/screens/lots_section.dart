@@ -125,6 +125,7 @@ class _LotsSectionState extends State<LotsSection> {
       ),
     );
     if (ok != null) {
+      if (mounted) AppScope.of(context).pushed(widget.shop);
       if (mounted) toast(context, 'Batch added');
       load();
     }
@@ -154,6 +155,7 @@ class _LotsSectionState extends State<LotsSection> {
       return true;
     });
     if (ok == true) {
+      if (mounted) AppScope.of(context).pushed(widget.shop);
       if (mounted) toast(context, 'Batch changed');
       load();
     }

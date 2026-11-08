@@ -193,6 +193,7 @@ class _ShopSuppliersScreenState extends State<ShopSuppliersScreen> {
     final id = await guard(context, () => pushSupplier(app.db, c, s, pick));
     if (id != null && mounted) {
       setState(() {});
+      app.pushed(s);
       toast(context, '${pick.name} is in ${s.name}');
     }
   }

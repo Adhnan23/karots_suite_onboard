@@ -139,6 +139,7 @@ class _PendingScreenState extends State<PendingScreen> {
                   : () async {
                       setState(() => busy = true);
                       final left = await guard(context, () => flushPending(app.db, client, widget.shop));
+                      app.pushed(widget.shop);
                       setState(() => busy = false);
                       await load();
                       if (left != null && context.mounted) toast(context, left == 0 ? 'All pushed' : '$left still waiting: see why on each');

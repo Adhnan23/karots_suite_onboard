@@ -5,6 +5,8 @@ import 'data/models.dart';
 import 'settings/secrets.dart';
 import 'settings/secure.dart';
 import 'suite/client.dart';
+import 'sync/auto_pull.dart';
+import 'sync/pull.dart';
 import 'theme/mode.dart';
 
 /// What every screen reaches: the database, the secret store, and the signed-in
@@ -17,6 +19,14 @@ class AppState extends ChangeNotifier {
   /// Light, dark or the device's; the page heads carry the switch.
   final ModeController mode;
   final _sessions = <String, SuiteClient>{};
+  final _pullers = <String, AutoPuller>{};
+
+  /// The shop's background pull while connected (null when not connected).
+  AutoPuller? puller(Shop s) => _pullers[s.uid];
+
+  /// Something was pushed to the shop: pull now, so the lists show it and the
+  /// team's changes come along.
+  void pushed(Shop s) => _pullers[s.uid]?.kick();
 
   SuiteClient? session(Shop s) => _sessions[s.uid];
   bool connected(Shop s) => _sessions.containsKey(s.uid);
@@ -32,12 +42,17 @@ class AppState extends ChangeNotifier {
     final secret = await Secrets(store).forShop(s);
     await c.signIn(secret, s.installId);
     _sessions[s.uid] = c;
+    _pullers.remove(s.uid)?.stop();
+    _pullers[s.uid] = AutoPuller(() => pull(db, c, s))
+      ..addListener(notifyListeners)
+      ..start();
     notifyListeners();
     return c;
   }
 
   void disconnect(Shop s) {
     _sessions.remove(s.uid);
+    _pullers.remove(s.uid)?.stop();
     notifyListeners();
   }
 

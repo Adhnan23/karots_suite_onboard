@@ -28,7 +28,7 @@ class _ShopScreenState extends State<ShopScreen> {
   Future<void> doPull() async {
     final app = AppScope.of(context);
     final c = app.session(s);
-    if (c == null) return;
+    if (c == null || app.puller(s)?.running == true) return; // a background pull is on it
     final r = await guard(context, () => pull(app.db, c, s, step: (x) => setState(() => step = x)));
     setState(() => step = '');
     app.changed();
@@ -101,6 +101,29 @@ class _ShopScreenState extends State<ShopScreen> {
                 if (s.plugins.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Wrap(spacing: 6, runSpacing: 6, children: [for (final p in s.plugins) Tag(p)]),
+                ],
+                if (app.puller(s) case final auto?) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(
+                        auto.error.isNotEmpty ? Icons.sync_problem_rounded : Icons.sync_rounded,
+                        size: 16,
+                        color: auto.error.isNotEmpty ? c.danger : c.success,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          auto.error.isNotEmpty
+                              ? 'Auto-pull failed: ${auto.error}'
+                              : auto.running
+                              ? 'Pulling…'
+                              : 'Pulls by itself every 2 minutes${auto.last == null ? '' : ' · updated ${DateFormat('HH:mm').format(auto.last!)}'}',
+                          style: TextStyle(fontSize: 13, color: auto.error.isNotEmpty ? c.danger : c.mutedForeground),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
                 if (snap['stockTake'] == false) ...[const SizedBox(height: 10), Tag('Stock-take is off: old stock can\'t be added', tone: c.warning)],
                 const SizedBox(height: 14),

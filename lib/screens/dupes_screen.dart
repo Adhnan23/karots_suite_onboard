@@ -83,6 +83,7 @@ class _DupesScreenState extends State<DupesScreen> {
     });
     if (done == true) {
       await app.db.raw.delete('shop_products', where: 'shop_uid = ? AND remote_id = ?', whereArgs: [where, from]);
+      app.pushed(shop);
       if (mounted) toast(context, 'Merged in ${shop.name}');
       load();
     }
