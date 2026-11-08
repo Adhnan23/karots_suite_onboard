@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import 'app.dart';
@@ -21,7 +23,10 @@ class OnboardApp extends StatefulWidget {
 }
 
 class _OnboardAppState extends State<OnboardApp> {
-  final store = SecureStore();
+  late final KeyStore store = FallbackStore(
+    SecureStore(),
+    FileStore('${Platform.environment['HOME'] ?? '.'}/.local/share/karots_suite_onboard/store.json'),
+  );
   late final mode = ModeController(store)..load();
   bool open = false;
   AppState? app;

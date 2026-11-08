@@ -47,7 +47,11 @@ void main() {
 
   test('the count sheet is the Suite\'s stock-take format, from the shop\'s last pull', () {
     final rows = [
-      {'name': 'Panadol, 500mg', 'barcode': '111', 'json': '{"name":"Panadol, 500mg","cost":"8.50","selling":"10.00","wholesale":"","openingQty":"40"}'},
+      {
+        'name': 'Panadol, 500mg',
+        'barcode': '111',
+        'json': '{"name":"Panadol, 500mg","cost":"8.50","selling":"10.00","wholesale":"","openingQty":"40"}',
+      },
     ];
     final lines = countSheetCsv(rows).split('\r\n');
     expect(lines.first, 'barcode,name,current_qty,counted_qty,cost,selling_price,wholesale_price,batch,expiry');

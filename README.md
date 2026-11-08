@@ -34,6 +34,16 @@ and are never in a backup or a sync. Fingerprint opens it on Android.
 
 The app carries only its ID's seed (`lib/lock/app_identity.dart`), never the secret.
 
+## Suppliers and Quick add
+
+- **Supplier lists:** Suppliers → a supplier → Download template (the standard CSV:
+  name, barcode, extra_barcodes, unit, price, packs, plus any extra columns as details) →
+  Import list. Products the catalogue has get their gaps filled and that supplier; new ones
+  wait in Review. A product has one usual supplier, or none; no cost is kept (it's typed
+  at the shop).
+- **Quick add** (a shop's first action): scan or search, cost / price / quantity / expiry,
+  next. It brings the product's supplier and unit into the shop when they're missing.
+
 ## Team, backup and sync
 
 - **Team:** devices that join one team key keep the same catalogue, suppliers and shops

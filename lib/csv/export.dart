@@ -75,10 +75,20 @@ String suppliersCsv(List<CatalogSupplier> list) => Csv(autoDetect: false).encode
 /// The Suite's stock-take sheet (Stock-take → Import), from the shop's last pull:
 /// fill counted_qty at the shop. The stock is as of that pull.
 String countSheetCsv(List<Map<String, Object?>> shopProducts) => Csv(autoDetect: false).encode([
-      ['barcode', 'name', 'current_qty', 'counted_qty', 'cost', 'selling_price', 'wholesale_price', 'batch', 'expiry'],
-      for (final r in shopProducts)
-        () {
-          final j = (jsonDecode('${r['json'] ?? '{}'}') as Map);
-          return ['${r['barcode'] ?? ''}', '${r['name'] ?? ''}', '${j['openingQty'] ?? ''}', '', '${j['cost'] ?? ''}', '${j['selling'] ?? ''}', '${j['wholesale'] ?? ''}', '', ''];
-        }(),
-    ]);
+  ['barcode', 'name', 'current_qty', 'counted_qty', 'cost', 'selling_price', 'wholesale_price', 'batch', 'expiry'],
+  for (final r in shopProducts)
+    () {
+      final j = (jsonDecode('${r['json'] ?? '{}'}') as Map);
+      return [
+        '${r['barcode'] ?? ''}',
+        '${r['name'] ?? ''}',
+        '${j['openingQty'] ?? ''}',
+        '',
+        '${j['cost'] ?? ''}',
+        '${j['selling'] ?? ''}',
+        '${j['wholesale'] ?? ''}',
+        '',
+        '',
+      ];
+    }(),
+]);
