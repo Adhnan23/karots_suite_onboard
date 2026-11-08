@@ -66,32 +66,51 @@ class _LockScreenState extends State<LockScreen> {
           constraints: const BoxConstraints(maxWidth: 380),
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Container(
-                width: 56, height: 56,
-                decoration: BoxDecoration(color: c.brand, borderRadius: BorderRadius.circular(KsTokens.radius)),
-                child: Icon(Icons.inventory_2_rounded, color: c.brandForeground),
-              ),
-              const SizedBox(height: 18),
-              Text('Karots Suite Onboard', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text(firstRun! ? 'Set up this device. The secret opens every shop, so the app keeps it behind your PIN.' : 'Enter your PIN',
-                  style: TextStyle(color: c.mutedForeground)),
-              const SizedBox(height: 22),
-              TextField(
-                controller: pin, autofocus: true, obscureText: true, keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: firstRun! ? 'Choose a PIN' : 'PIN'),
-                onSubmitted: (_) => _go(),
-              ),
-              if (firstRun!) ...[
-                const SizedBox(height: 12),
-                TextField(controller: secret, obscureText: true, decoration: const InputDecoration(labelText: 'Support secret')),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(color: c.brand, borderRadius: BorderRadius.circular(KsTokens.radius)),
+                  child: Icon(Icons.inventory_2_rounded, color: c.brandForeground),
+                ),
+                const SizedBox(height: 18),
+                Text('Karots Suite Onboard', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(
+                  firstRun! ? 'Set up this device. The secret opens every shop, so the app keeps it behind your PIN.' : 'Enter your PIN',
+                  style: TextStyle(color: c.mutedForeground),
+                ),
+                const SizedBox(height: 22),
+                TextField(
+                  controller: pin,
+                  autofocus: true,
+                  obscureText: true,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: firstRun! ? 'Choose a PIN' : 'PIN'),
+                  onSubmitted: (_) => _go(),
+                ),
+                if (firstRun!) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: secret,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Support secret'),
+                  ),
+                ],
+                if (error.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(error, style: TextStyle(color: c.danger)),
+                  ),
+                const SizedBox(height: 18),
+                FilledButton(onPressed: _go, child: Text(firstRun! ? 'Save and open' : 'Open')),
+                if (!firstRun! && Platform.isAndroid)
+                  TextButton.icon(onPressed: _bio, icon: const Icon(Icons.fingerprint), label: const Text('Use fingerprint')),
               ],
-              if (error.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 10), child: Text(error, style: TextStyle(color: c.danger))),
-              const SizedBox(height: 18),
-              FilledButton(onPressed: _go, child: Text(firstRun! ? 'Save and open' : 'Open')),
-              if (!firstRun! && Platform.isAndroid) TextButton.icon(onPressed: _bio, icon: const Icon(Icons.fingerprint), label: const Text('Use fingerprint')),
-            ]),
+            ),
           ),
         ),
       ),

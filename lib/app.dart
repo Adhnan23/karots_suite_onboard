@@ -28,16 +28,18 @@ class _AppHomeState extends State<AppHome> {
     final body = page(tab);
     if (wide) {
       return Scaffold(
-        body: Row(children: [
-          NavigationRail(
-            selectedIndex: tab,
-            labelType: NavigationRailLabelType.all,
-            onDestinationSelected: (i) => setState(() => tab = i),
-            destinations: [for (final d in dests) NavigationRailDestination(icon: Icon(d.$1), selectedIcon: Icon(d.$2), label: Text(d.$3))],
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(child: body),
-        ]),
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: tab,
+              labelType: NavigationRailLabelType.all,
+              onDestinationSelected: (i) => setState(() => tab = i),
+              destinations: [for (final d in dests) NavigationRailDestination(icon: Icon(d.$1), selectedIcon: Icon(d.$2), label: Text(d.$3))],
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(child: body),
+          ],
+        ),
       );
     }
     return Scaffold(

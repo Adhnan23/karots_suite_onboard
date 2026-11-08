@@ -11,8 +11,14 @@ void main() {
 
   test('a catalogue product round trips with its barcodes, packs and fields', () async {
     final p = CatalogProduct(
-      name: 'Panadol 500mg', barcode: '111', category: 'Medicine > Pain', unit: 'pcs',
-      cost: '8.50', selling: '10.00', kinds: {'pharmacy'}, sources: {'shop-1'},
+      name: 'Panadol 500mg',
+      barcode: '111',
+      category: 'Medicine > Pain',
+      unit: 'pcs',
+      cost: '8.50',
+      selling: '10.00',
+      kinds: {'pharmacy'},
+      sources: {'shop-1'},
       barcodes: ['222', '333'],
       packs: [Pack(name: 'Card', size: '12', selling: '115.00', barcode: 'C1')],
       fields: {'Generic name': 'Paracetamol'},
@@ -35,7 +41,9 @@ void main() {
     expect((await db.suppliers()).single.phone, '0771');
     final s = Shop(name: 'Iman', kind: 'pharmacy', address: 'http://100.64.0.5:3000');
     await db.saveShop(s);
-    s.snapshot = {'plugins': ['productplus']};
+    s.snapshot = {
+      'plugins': ['productplus'],
+    };
     await db.saveShop(s);
     expect((await db.shops()).single.snapshot['plugins'], ['productplus']);
     await db.addReview(ReviewItem(shopUid: s.uid, kind: 'product', data: {'name': 'X'}));

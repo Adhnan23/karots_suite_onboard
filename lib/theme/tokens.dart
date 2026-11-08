@@ -64,6 +64,5 @@ class KsTokens {
     warning: Color(0xFFF0A23B),
   );
 
-  static KsColors of(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? dark : light;
+  static KsColors of(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? dark : light;
 }

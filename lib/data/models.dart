@@ -13,8 +13,12 @@ class Pack {
   String name, size, selling, wholesale, barcode;
   Map<String, Object?> toMap() => {'name': name, 'size': size, 'selling': selling, 'wholesale': wholesale, 'barcode': barcode};
   factory Pack.fromMap(Map m) => Pack(
-      name: m['name'] as String? ?? '', size: '${m['size'] ?? ''}', selling: m['selling'] as String? ?? '',
-      wholesale: m['wholesale'] as String? ?? '', barcode: m['barcode'] as String? ?? '');
+    name: m['name'] as String? ?? '',
+    size: '${m['size'] ?? ''}',
+    selling: m['selling'] as String? ?? '',
+    wholesale: m['wholesale'] as String? ?? '',
+    barcode: m['barcode'] as String? ?? '',
+  );
 }
 
 /// A product in the catalogue. Money is a decimal string. fields: custom field
@@ -40,13 +44,13 @@ class CatalogProduct {
     List<Pack>? packs,
     Map<String, String>? fields,
     DateTime? updatedAt,
-  })  : uid = uid ?? newUid(),
-        kinds = kinds ?? {},
-        sources = sources ?? {},
-        barcodes = barcodes ?? [],
-        packs = packs ?? [],
-        fields = fields ?? {},
-        updatedAt = updatedAt ?? DateTime.now();
+  }) : uid = uid ?? newUid(),
+       kinds = kinds ?? {},
+       sources = sources ?? {},
+       barcodes = barcodes ?? [],
+       packs = packs ?? [],
+       fields = fields ?? {},
+       updatedAt = updatedAt ?? DateTime.now();
   final String uid;
   String name, nameLocal, barcode, category, unit, cost, selling, wholesale, taxRate, supplier;
   int warrantyMonths;
@@ -61,24 +65,50 @@ class CatalogProduct {
   List<String> get allCodes => [if (barcode.isNotEmpty) barcode, ...barcodes];
 
   Map<String, Object?> toRow() => {
-        'uid': uid, 'name': name, 'name_local': nameLocal, 'barcode': barcode, 'category': category, 'unit': unit,
-        'cost': cost, 'selling': selling, 'wholesale': wholesale, 'tax_rate': taxRate, 'warranty_months': warrantyMonths,
-        'track_serial': trackSerial ? 1 : 0, 'supplier': supplier, 'kinds': kinds.join(','), 'sources': sources.join(','),
-        'updated_at': updatedAt.toIso8601String(),
-      };
+    'uid': uid,
+    'name': name,
+    'name_local': nameLocal,
+    'barcode': barcode,
+    'category': category,
+    'unit': unit,
+    'cost': cost,
+    'selling': selling,
+    'wholesale': wholesale,
+    'tax_rate': taxRate,
+    'warranty_months': warrantyMonths,
+    'track_serial': trackSerial ? 1 : 0,
+    'supplier': supplier,
+    'kinds': kinds.join(','),
+    'sources': sources.join(','),
+    'updated_at': updatedAt.toIso8601String(),
+  };
 
   factory CatalogProduct.fromRow(Map<String, Object?> r) => CatalogProduct(
-        uid: r['uid'] as String, name: r['name'] as String, nameLocal: r['name_local'] as String? ?? '',
-        barcode: r['barcode'] as String? ?? '', category: r['category'] as String? ?? '', unit: r['unit'] as String? ?? 'pcs',
-        cost: r['cost'] as String? ?? '', selling: r['selling'] as String? ?? '', wholesale: r['wholesale'] as String? ?? '',
-        taxRate: r['tax_rate'] as String? ?? '', warrantyMonths: r['warranty_months'] as int? ?? 0,
-        trackSerial: (r['track_serial'] as int? ?? 0) == 1, supplier: r['supplier'] as String? ?? '',
-        kinds: _set(r['kinds']), sources: _set(r['sources']),
-        updatedAt: DateTime.tryParse(r['updated_at'] as String? ?? ''),
-      );
+    uid: r['uid'] as String,
+    name: r['name'] as String,
+    nameLocal: r['name_local'] as String? ?? '',
+    barcode: r['barcode'] as String? ?? '',
+    category: r['category'] as String? ?? '',
+    unit: r['unit'] as String? ?? 'pcs',
+    cost: r['cost'] as String? ?? '',
+    selling: r['selling'] as String? ?? '',
+    wholesale: r['wholesale'] as String? ?? '',
+    taxRate: r['tax_rate'] as String? ?? '',
+    warrantyMonths: r['warranty_months'] as int? ?? 0,
+    trackSerial: (r['track_serial'] as int? ?? 0) == 1,
+    supplier: r['supplier'] as String? ?? '',
+    kinds: _set(r['kinds']),
+    sources: _set(r['sources']),
+    updatedAt: DateTime.tryParse(r['updated_at'] as String? ?? ''),
+  );
 
   /// As JSON (review rows and drafts carry products this way).
-  Map<String, Object?> toJson() => {...toRow(), 'barcodes': barcodes, 'packs': [for (final k in packs) k.toMap()], 'fields': fields};
+  Map<String, Object?> toJson() => {
+    ...toRow(),
+    'barcodes': barcodes,
+    'packs': [for (final k in packs) k.toMap()],
+    'fields': fields,
+  };
   factory CatalogProduct.fromJson(Map m) {
     final p = CatalogProduct.fromRow({...m.cast<String, Object?>(), 'uid': m['uid'] ?? newUid()});
     p.barcodes = [for (final b in (m['barcodes'] as List? ?? [])) '$b'];
@@ -89,26 +119,50 @@ class CatalogProduct {
 }
 
 class CatalogSupplier {
-  CatalogSupplier({String? uid, required this.name, this.contact = '', this.phone = '', this.address = '', this.creditDays = 0, Set<String>? kinds, Set<String>? sources})
-      : uid = uid ?? newUid(),
-        kinds = kinds ?? {},
-        sources = sources ?? {};
+  CatalogSupplier({
+    String? uid,
+    required this.name,
+    this.contact = '',
+    this.phone = '',
+    this.address = '',
+    this.creditDays = 0,
+    Set<String>? kinds,
+    Set<String>? sources,
+  }) : uid = uid ?? newUid(),
+       kinds = kinds ?? {},
+       sources = sources ?? {};
   final String uid;
   String name, contact, phone, address;
   int creditDays;
   Set<String> kinds, sources;
-  Map<String, Object?> toRow() => {'uid': uid, 'name': name, 'contact': contact, 'phone': phone, 'address': address, 'credit_days': creditDays, 'kinds': kinds.join(','), 'sources': sources.join(',')};
+  Map<String, Object?> toRow() => {
+    'uid': uid,
+    'name': name,
+    'contact': contact,
+    'phone': phone,
+    'address': address,
+    'credit_days': creditDays,
+    'kinds': kinds.join(','),
+    'sources': sources.join(','),
+  };
   factory CatalogSupplier.fromRow(Map r) => CatalogSupplier(
-      uid: r['uid'] as String? ?? newUid(), name: r['name'] as String? ?? '', contact: r['contact'] as String? ?? '', phone: r['phone'] as String? ?? '',
-      address: r['address'] as String? ?? '', creditDays: r['credit_days'] as int? ?? 0, kinds: _set(r['kinds']), sources: _set(r['sources']));
+    uid: r['uid'] as String? ?? newUid(),
+    name: r['name'] as String? ?? '',
+    contact: r['contact'] as String? ?? '',
+    phone: r['phone'] as String? ?? '',
+    address: r['address'] as String? ?? '',
+    creditDays: r['credit_days'] as int? ?? 0,
+    kinds: _set(r['kinds']),
+    sources: _set(r['sources']),
+  );
 }
 
 /// A shop profile. snapshot holds what the last pull read: plugins, categories,
 /// units, Product Plus fields, Alternatives, AI settings, stock-take.
 class Shop {
   Shop({String? uid, required this.name, this.kind = '', this.address = '', this.installId = '', this.lastPull, Map<String, dynamic>? snapshot})
-      : uid = uid ?? newUid(),
-        snapshot = snapshot ?? {};
+    : uid = uid ?? newUid(),
+      snapshot = snapshot ?? {};
   final String uid;
   String name, kind, address, installId;
   DateTime? lastPull;
@@ -121,11 +175,24 @@ class Shop {
     return host.endsWith('.ts.net') || RegExp(r'^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.').hasMatch(host);
   }
 
-  Map<String, Object?> toRow() => {'uid': uid, 'name': name, 'kind': kind, 'address': address, 'install_id': installId, 'last_pull': lastPull?.toIso8601String(), 'snapshot': jsonEncode(snapshot)};
+  Map<String, Object?> toRow() => {
+    'uid': uid,
+    'name': name,
+    'kind': kind,
+    'address': address,
+    'install_id': installId,
+    'last_pull': lastPull?.toIso8601String(),
+    'snapshot': jsonEncode(snapshot),
+  };
   factory Shop.fromRow(Map r) => Shop(
-      uid: r['uid'] as String, name: r['name'] as String, kind: r['kind'] as String? ?? '', address: r['address'] as String? ?? '',
-      installId: r['install_id'] as String? ?? '', lastPull: DateTime.tryParse(r['last_pull'] as String? ?? ''),
-      snapshot: (jsonDecode(r['snapshot'] as String? ?? '{}') as Map).cast<String, dynamic>());
+    uid: r['uid'] as String,
+    name: r['name'] as String,
+    kind: r['kind'] as String? ?? '',
+    address: r['address'] as String? ?? '',
+    installId: r['install_id'] as String? ?? '',
+    lastPull: DateTime.tryParse(r['last_pull'] as String? ?? ''),
+    snapshot: (jsonDecode(r['snapshot'] as String? ?? '{}') as Map).cast<String, dynamic>(),
+  );
 }
 
 /// Something a pull found that the catalogue hasn't got: accept, fix or drop.
@@ -136,22 +203,37 @@ class ReviewItem {
   String status; // new | accepted | dropped
   Map<String, Object?> toRow() => {'uid': uid, 'shop_uid': shopUid, 'kind': kind, 'json': jsonEncode(data), 'status': status};
   factory ReviewItem.fromRow(Map r) => ReviewItem(
-      uid: r['uid'] as String, shopUid: r['shop_uid'] as String, kind: r['kind'] as String,
-      data: (jsonDecode(r['json'] as String) as Map).cast<String, dynamic>(), status: r['status'] as String);
+    uid: r['uid'] as String,
+    shopUid: r['shop_uid'] as String,
+    kind: r['kind'] as String,
+    data: (jsonDecode(r['json'] as String) as Map).cast<String, dynamic>(),
+    status: r['status'] as String,
+  );
 }
 
 /// Work waiting for a shop to be reachable.
 class PendingOp {
   PendingOp({String? uid, required this.shopUid, required this.op, required this.data, this.error = '', DateTime? createdAt})
-      : uid = uid ?? newUid(),
-        createdAt = createdAt ?? DateTime.now();
+    : uid = uid ?? newUid(),
+      createdAt = createdAt ?? DateTime.now();
   final String uid, shopUid, op; // op: create | update | merge | alt
   Map<String, dynamic> data;
   String error;
   final DateTime createdAt;
-  Map<String, Object?> toRow() => {'uid': uid, 'shop_uid': shopUid, 'op': op, 'json': jsonEncode(data), 'error': error, 'created_at': createdAt.toIso8601String()};
+  Map<String, Object?> toRow() => {
+    'uid': uid,
+    'shop_uid': shopUid,
+    'op': op,
+    'json': jsonEncode(data),
+    'error': error,
+    'created_at': createdAt.toIso8601String(),
+  };
   factory PendingOp.fromRow(Map r) => PendingOp(
-      uid: r['uid'] as String, shopUid: r['shop_uid'] as String, op: r['op'] as String,
-      data: (jsonDecode(r['json'] as String) as Map).cast<String, dynamic>(), error: r['error'] as String? ?? '',
-      createdAt: DateTime.tryParse(r['created_at'] as String? ?? ''));
+    uid: r['uid'] as String,
+    shopUid: r['shop_uid'] as String,
+    op: r['op'] as String,
+    data: (jsonDecode(r['json'] as String) as Map).cast<String, dynamic>(),
+    error: r['error'] as String? ?? '',
+    createdAt: DateTime.tryParse(r['created_at'] as String? ?? ''),
+  );
 }

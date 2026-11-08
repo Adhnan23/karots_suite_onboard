@@ -8,8 +8,7 @@ import 'package:crypto/crypto.dart';
 /// HMAC(seed, hour number) → 6 digits.
 const _label = 'karots-suite/support/seed/v1|';
 
-String supportPin(String secret, String installId, DateTime t) =>
-    _code(_seed(secret, installId), t.toUtc().millisecondsSinceEpoch ~/ 1000 ~/ 3600);
+String supportPin(String secret, String installId, DateTime t) => _code(_seed(secret, installId), t.toUtc().millisecondsSinceEpoch ~/ 1000 ~/ 3600);
 
 /// This hour's PIN, then the previous hour's (the Suite accepts ±1 hour).
 List<String> supportPinsNow(String secret, String installId, DateTime now) {

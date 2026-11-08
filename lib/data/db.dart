@@ -57,28 +57,28 @@ class Db {
   // ---- catalogue products ----
 
   Future<void> saveProduct(CatalogProduct x) => raw.transaction((t) async {
-        x.updatedAt = DateTime.now();
-        await t.insert('catalog_products', x.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
-        for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
-          await t.delete(tb, where: 'product_uid = ?', whereArgs: [x.uid]);
-        }
-        for (final (i, c) in x.allCodes.indexed) {
-          await t.insert('catalog_barcodes', {'product_uid': x.uid, 'code': c, 'pos': i});
-        }
-        for (final (i, k) in x.packs.indexed) {
-          await t.insert('catalog_packs', {'product_uid': x.uid, ...k.toMap(), 'pos': i});
-        }
-        for (final e in x.fields.entries) {
-          await t.insert('catalog_fields', {'product_uid': x.uid, 'label': e.key, 'value': e.value});
-        }
-      });
+    x.updatedAt = DateTime.now();
+    await t.insert('catalog_products', x.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
+    for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
+      await t.delete(tb, where: 'product_uid = ?', whereArgs: [x.uid]);
+    }
+    for (final (i, c) in x.allCodes.indexed) {
+      await t.insert('catalog_barcodes', {'product_uid': x.uid, 'code': c, 'pos': i});
+    }
+    for (final (i, k) in x.packs.indexed) {
+      await t.insert('catalog_packs', {'product_uid': x.uid, ...k.toMap(), 'pos': i});
+    }
+    for (final e in x.fields.entries) {
+      await t.insert('catalog_fields', {'product_uid': x.uid, 'label': e.key, 'value': e.value});
+    }
+  });
 
   Future<void> deleteProduct(String uid) => raw.transaction((t) async {
-        for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
-          await t.delete(tb, where: 'product_uid = ?', whereArgs: [uid]);
-        }
-        await t.delete('catalog_products', where: 'uid = ?', whereArgs: [uid]);
-      });
+    for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
+      await t.delete(tb, where: 'product_uid = ?', whereArgs: [uid]);
+    }
+    await t.delete('catalog_products', where: 'uid = ?', whereArgs: [uid]);
+  });
 
   Future<List<CatalogProduct>> products({String where = '1=1', List<Object?> args = const []}) async {
     final rows = await raw.query('catalog_products', where: where, whereArgs: args, orderBy: 'name COLLATE NOCASE');
@@ -109,8 +109,9 @@ class Db {
   // ---- suppliers ----
 
   Future<void> saveSupplier(CatalogSupplier s) => raw.insert('catalog_suppliers', s.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
-  Future<List<CatalogSupplier>> suppliers() async =>
-      [for (final r in await raw.query('catalog_suppliers', orderBy: 'name COLLATE NOCASE')) CatalogSupplier.fromRow(r)];
+  Future<List<CatalogSupplier>> suppliers() async => [
+    for (final r in await raw.query('catalog_suppliers', orderBy: 'name COLLATE NOCASE')) CatalogSupplier.fromRow(r),
+  ];
 
   // ---- shops ----
 
@@ -121,11 +122,11 @@ class Db {
   // ---- a shop's own list, from its last pull ----
 
   Future<void> replaceShopProducts(String shopUid, List<Map<String, Object?>> rows) => raw.transaction((t) async {
-        await t.delete('shop_products', where: 'shop_uid = ?', whereArgs: [shopUid]);
-        for (final r in rows) {
-          await t.insert('shop_products', {...r, 'shop_uid': shopUid}, conflictAlgorithm: ConflictAlgorithm.replace);
-        }
-      });
+    await t.delete('shop_products', where: 'shop_uid = ?', whereArgs: [shopUid]);
+    for (final r in rows) {
+      await t.insert('shop_products', {...r, 'shop_uid': shopUid}, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+  });
   Future<List<Map<String, Object?>>> shopProducts(String shopUid) =>
       raw.query('shop_products', where: 'shop_uid = ?', whereArgs: [shopUid], orderBy: 'name COLLATE NOCASE');
 
@@ -141,18 +142,21 @@ class Db {
   }
 
   Future<List<ReviewItem>> reviews({String status = 'new', String? shopUid}) async => [
-        for (final r in await raw.query('review',
-            where: shopUid == null ? 'status = ?' : 'status = ? AND shop_uid = ?', whereArgs: [status, ?shopUid]))
-          ReviewItem.fromRow(r)
-      ];
+    for (final r in await raw.query('review', where: shopUid == null ? 'status = ?' : 'status = ? AND shop_uid = ?', whereArgs: [status, ?shopUid]))
+      ReviewItem.fromRow(r),
+  ];
   Future<void> setReview(String uid, String status, [Map<String, dynamic>? data]) => raw.update(
-      'review', {'status': status, if (data != null) 'json': ReviewItem(shopUid: '', kind: '', data: data).toRow()['json']},
-      where: 'uid = ?', whereArgs: [uid]);
+    'review',
+    {'status': status, if (data != null) 'json': ReviewItem(shopUid: '', kind: '', data: data).toRow()['json']},
+    where: 'uid = ?',
+    whereArgs: [uid],
+  );
 
   // ---- pending ----
 
   Future<void> addPending(PendingOp o) => raw.insert('pending', o.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
-  Future<List<PendingOp>> pending(String shopUid) async =>
-      [for (final r in await raw.query('pending', where: 'shop_uid = ?', whereArgs: [shopUid], orderBy: 'created_at')) PendingOp.fromRow(r)];
+  Future<List<PendingOp>> pending(String shopUid) async => [
+    for (final r in await raw.query('pending', where: 'shop_uid = ?', whereArgs: [shopUid], orderBy: 'created_at')) PendingOp.fromRow(r),
+  ];
   Future<void> donePending(String uid) => raw.delete('pending', where: 'uid = ?', whereArgs: [uid]);
 }

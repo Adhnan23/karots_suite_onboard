@@ -28,27 +28,80 @@ ThemeData ksTheme(Brightness b, {bool fonts = true}) {
   return base.copyWith(
     scaffoldBackgroundColor: c.background,
     textTheme: text.apply(bodyColor: c.foreground, displayColor: c.foreground),
-    cardTheme: CardThemeData(color: c.card, elevation: 0, margin: EdgeInsets.zero, shape: round.copyWith(side: BorderSide(color: c.border))),
-    appBarTheme: AppBarTheme(backgroundColor: c.background, foregroundColor: c.foreground, elevation: 0, scrolledUnderElevation: 0, centerTitle: false),
+    cardTheme: CardThemeData(
+      color: c.card,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: round.copyWith(side: BorderSide(color: c.border)),
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: c.background,
+      foregroundColor: c.foreground,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+    ),
     dividerTheme: DividerThemeData(color: c.border, space: 1),
-    filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(backgroundColor: c.brand, foregroundColor: c.brandForeground, shape: pill, minimumSize: const Size(0, 44), textStyle: const TextStyle(fontWeight: FontWeight.w700))),
-    outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(foregroundColor: c.foreground, side: BorderSide(color: c.border), shape: pill, minimumSize: const Size(0, 44))),
-    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: c.foreground, shape: pill)),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: c.brand,
+        foregroundColor: c.brandForeground,
+        shape: pill,
+        minimumSize: const Size(0, 44),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: c.foreground,
+        side: BorderSide(color: c.border),
+        shape: pill,
+        minimumSize: const Size(0, 44),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: c.foreground, shape: pill),
+    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: c.card,
       isDense: true,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(KsTokens.radiusSm), borderSide: BorderSide(color: c.border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(KsTokens.radiusSm), borderSide: BorderSide(color: c.border)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(KsTokens.radiusSm), borderSide: BorderSide(color: c.brand, width: 2)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KsTokens.radiusSm),
+        borderSide: BorderSide(color: c.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KsTokens.radiusSm),
+        borderSide: BorderSide(color: c.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KsTokens.radiusSm),
+        borderSide: BorderSide(color: c.brand, width: 2),
+      ),
       labelStyle: TextStyle(color: c.mutedForeground),
     ),
-    chipTheme: ChipThemeData(shape: pill, side: BorderSide(color: c.border), backgroundColor: c.muted, selectedColor: c.brandSoft),
+    chipTheme: ChipThemeData(
+      shape: pill,
+      side: BorderSide(color: c.border),
+      backgroundColor: c.muted,
+      selectedColor: c.brandSoft,
+    ),
     navigationBarTheme: NavigationBarThemeData(backgroundColor: c.card, indicatorColor: c.brandSoft),
     navigationRailTheme: NavigationRailThemeData(backgroundColor: c.card, indicatorColor: c.brandSoft),
-    bottomSheetTheme: BottomSheetThemeData(backgroundColor: c.card, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(KsTokens.radius)))),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: c.card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(KsTokens.radius))),
+    ),
     dialogTheme: DialogThemeData(backgroundColor: c.card, shape: round),
-    snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, backgroundColor: c.selected, contentTextStyle: TextStyle(color: c.selectedForeground), shape: round),
-    checkboxTheme: CheckboxThemeData(fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? c.brand : null), checkColor: WidgetStatePropertyAll(c.brandForeground)),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: c.selected,
+      contentTextStyle: TextStyle(color: c.selectedForeground),
+      shape: round,
+    ),
+    checkboxTheme: CheckboxThemeData(
+      fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? c.brand : null),
+      checkColor: WidgetStatePropertyAll(c.brandForeground),
+    ),
   );
 }

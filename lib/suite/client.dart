@@ -28,8 +28,8 @@ class Me {
 /// money stays a decimal string.
 class SuiteClient {
   SuiteClient(String base, {http.Client? client})
-      : base = base.endsWith('/') ? base.substring(0, base.length - 1) : base,
-        _http = client ?? http.Client();
+    : base = base.endsWith('/') ? base.substring(0, base.length - 1) : base,
+      _http = client ?? http.Client();
   final String base;
   final http.Client _http;
   String _cookie = '';
@@ -37,10 +37,10 @@ class SuiteClient {
   static const timeout = Duration(seconds: 60);
 
   Map<String, String> get _headers => {
-        'X-Ks-Device': 'karots-suite-onboard',
-        'Accept': 'application/json',
-        if (_cookie.isNotEmpty) 'Cookie': _cookie,
-      };
+    'X-Ks-Device': 'karots-suite-onboard',
+    'Accept': 'application/json',
+    if (_cookie.isNotEmpty) 'Cookie': _cookie,
+  };
 
   Future<http.Response> _send(String method, String path, {Object? body, Map<String, String>? query}) async {
     final uri = Uri.parse('$base/api/v1$path').replace(queryParameters: query);
@@ -105,16 +105,20 @@ class SuiteClient {
 
   // ---- whole-shop reads ----
 
-  Future<String> productsCsv({required bool customFields}) async =>
-      utf8.decode((await _send('GET', '/admin/products/export', query: {'format': 'csv', if (customFields) 'extras': 'productplus'})).bodyBytes);
+  Future<String> productsCsv({required bool customFields}) async => utf8.decode(
+    (await _send('GET', '/admin/products/export', query: {'format': 'csv', 'ids': '1', if (customFields) 'extras': 'productplus'})).bodyBytes,
+  );
   Future<String> suppliersCsv() async => utf8.decode((await _send('GET', '/admin/suppliers/export', query: {'format': 'csv'})).bodyBytes);
   Future<Map<int, List<Map>>> allPacks() async {
     final m = await get('/admin/products/packs') as Map;
-    return {for (final e in m.entries) int.parse('${e.key}'): [for (final k in e.value as List) k as Map]};
+    return {
+      for (final e in m.entries) int.parse('${e.key}'): [for (final k in e.value as List) k as Map],
+    };
   }
 
   Future<List> categories() async => await get('/admin/categories') as List;
   Future<List> units() async => await get('/admin/units') as List;
+
   /// The shop's suppliers as {id, name} for pickers.
   Future<List> supplierOptions() async => await get('/admin/supplier-options') as List;
   Future<List> fields() async => await get('/x/productplus/fields') as List;
@@ -129,11 +133,25 @@ class SuiteClient {
       await post('/admin/inventory/intake/create', {'product': product, 'quantity': quantity, 'expiry': expiry}) as Map;
 
   /// Another batch of old stock with its own expiry and prices.
-  Future<Map> intakeRestock(int productId, {required String quantity, String expiry = '', String cost = '', String selling = '', String wholesale = '', int supplierId = 0}) async =>
-      await post('/admin/inventory/intake/restock', {
-        'productId': productId, 'quantity': quantity, 'expiry': expiry, 'costPrice': cost,
-        'sellingPrice': selling, 'wholesalePrice': wholesale, 'batchId': 0, 'supplierId': supplierId, 'scanned': '',
-      }) as Map;
+  Future<Map> intakeRestock(
+    int productId, {
+    required String quantity,
+    String expiry = '',
+    String cost = '',
+    String selling = '',
+    String wholesale = '',
+    int supplierId = 0,
+  }) async => await post('/admin/inventory/intake/restock', {
+    'productId': productId,
+    'quantity': quantity,
+    'expiry': expiry,
+    'costPrice': cost,
+    'sellingPrice': selling,
+    'wholesalePrice': wholesale,
+    'batchId': 0,
+    'supplierId': supplierId,
+    'scanned': '',
+  }) as Map;
 
   Future<Map> product(int id) async => await get('/admin/products/$id') as Map;
   Future<Map> updateProduct(int id, Map body) async => await put('/admin/products/$id', body) as Map;

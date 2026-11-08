@@ -19,10 +19,10 @@ class _OnboardAppState extends State<OnboardApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'Karots Suite Onboard',
-        debugShowCheckedModeBanner: false,
-        theme: ksTheme(Brightness.light),
-        darkTheme: ksTheme(Brightness.dark),
-        home: open ? AppHome(store: store) : LockScreen(store: store, onOpen: () => setState(() => open = true)),
-      );
+    title: 'Karots Suite Onboard',
+    debugShowCheckedModeBanner: false,
+    theme: ksTheme(Brightness.light),
+    darkTheme: ksTheme(Brightness.dark),
+    home: open ? AppHome(store: store) : LockScreen(store: store, onOpen: () => setState(() => open = true)),
+  );
 }
