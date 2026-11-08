@@ -5,13 +5,17 @@ import 'data/models.dart';
 import 'settings/secrets.dart';
 import 'settings/secure.dart';
 import 'suite/client.dart';
+import 'theme/mode.dart';
 
 /// What every screen reaches: the database, the secret store, and the signed-in
 /// session per shop.
 class AppState extends ChangeNotifier {
-  AppState(this.db, this.store);
+  AppState(this.db, this.store, [ModeController? mode]) : mode = mode ?? ModeController(store);
   final Db db;
   final KeyStore store;
+
+  /// Light, dark or the device's; the page heads carry the switch.
+  final ModeController mode;
   final _sessions = <String, SuiteClient>{};
 
   SuiteClient? session(Shop s) => _sessions[s.uid];

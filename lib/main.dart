@@ -7,6 +7,7 @@ import 'lock/lock_screen.dart';
 import 'screens/shop_actions.dart';
 import 'settings/secure.dart';
 import 'theme/app_theme.dart';
+import 'theme/mode.dart';
 
 void main() {
   registerShopActions();
@@ -21,18 +22,23 @@ class OnboardApp extends StatefulWidget {
 
 class _OnboardAppState extends State<OnboardApp> {
   final store = SecureStore();
+  late final mode = ModeController(store)..load();
   bool open = false;
   AppState? app;
 
   Future<void> unlock() async {
-    app ??= AppState(await Db.open(), store);
+    app ??= AppState(await Db.open(), store, mode);
     setState(() => open = true);
   }
 
   @override
-  Widget build(BuildContext context) => buildApp(
-    app: open ? app : null,
-    home: open && app != null ? const AppHome() : LockScreen(store: store, onOpen: unlock),
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: mode,
+    builder: (context, m, _) => buildApp(
+      app: open ? app : null,
+      mode: m,
+      home: open && app != null ? const AppHome() : LockScreen(store: store, onOpen: unlock),
+    ),
   );
 }
 

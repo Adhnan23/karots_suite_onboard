@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../state.dart';
 import '../suite/client.dart';
+import '../theme/mode.dart';
 import '../theme/tokens.dart';
 
 /// Small shared pieces in the Suite's look.
@@ -32,6 +34,7 @@ class PageHead extends StatelessWidget {
             ),
           ),
           ...actions,
+          if (_mode(context) case final m?) ModeButton(mode: m),
         ],
       ),
     );
@@ -167,3 +170,5 @@ class Narrow extends StatelessWidget {
     ),
   );
 }
+
+ModeController? _mode(BuildContext context) => context.dependOnInheritedWidgetOfExactType<AppScope>()?.notifier?.mode;
