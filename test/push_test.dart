@@ -208,4 +208,35 @@ void main() {
     expect(d.product.fields, {'Generic name': 'Paracetamol'});
     expect(p.category, 'Medicine > Pain', reason: 'the catalogue keeps its own');
   });
+
+  test('a pushed product shows in the shop\'s list at once, and a change updates it', () async {
+    await pushCreate(db, SuiteClient(shop.url), s, draft());
+    var mine = await db.shopProducts(s.uid);
+    expect(mine.map((x) => (x['remote_id'], x['name'])), [(70, 'Amoxil 250')]);
+    shop.routes['GET /api/v1/admin/products/70'] = (_, _) => {'id': 70, 'name': 'Amoxil 250', 'reorderLevel': 0, 'supplierId': 0};
+    shop.routes['PUT /api/v1/admin/products/70'] = (_, _) => {'id': 70};
+    await pushUpdate(
+      db,
+      SuiteClient(shop.url),
+      s,
+      Draft(
+        product: CatalogProduct(name: 'Amoxil 250mg Capsules', unit: 'pcs'),
+        remoteId: 70,
+      ),
+    );
+    mine = await db.shopProducts(s.uid);
+    expect(mine.map((x) => (x['remote_id'], x['name'])), [(70, 'Amoxil 250mg Capsules')]);
+  });
+
+  test('a refused pack is reported; the product stands', () async {
+    shop.routes['POST /api/v1/admin/products/70/packs'] = (r, _) {
+      r.response.statusCode = 422;
+      return {
+        'error': {'code': 'VALIDATION', 'message': 'that barcode is already used'},
+      };
+    };
+    final r = await pushCreate(db, SuiteClient(shop.url), s, draft());
+    expect(r.productId, 70);
+    expect(r.notes, ['Pack Card: that barcode is already used']);
+  });
 }

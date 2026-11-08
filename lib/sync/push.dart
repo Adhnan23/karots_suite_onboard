@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../data/db.dart';
 import '../data/models.dart';
 import '../suite/client.dart';
@@ -196,8 +198,9 @@ Future<int> pushSupplier(Db db, SuiteClient c, Shop s, CatalogSupplier sup) asyn
   return id;
 }
 
-/// Keeps the catalogue's copy: joins the product it matches, or adds it.
-Future<void> keepCopy(Db db, Shop s, CatalogProduct p) async {
+/// Keeps the catalogue's copy (joins the product it matches, or adds it), and
+/// the shop's own list, so a pushed product shows there before the next pull.
+Future<void> keepCopy(Db db, Shop s, CatalogProduct p, {int remoteId = 0}) async {
   final hit = await matchProduct(db, codes: p.allCodes, name: p.name);
   final x = hit ?? CatalogProduct.fromJson({...p.toJson(), 'uid': p.uid});
   if (hit != null) {
@@ -215,6 +218,16 @@ Future<void> keepCopy(Db db, Shop s, CatalogProduct p) async {
   if (s.kind.isNotEmpty) x.kinds.add(s.kind);
   x.sources.add(s.uid);
   await db.saveProduct(x);
+  if (remoteId > 0) {
+    await db.putShopProduct(s.uid, {
+      'remote_id': remoteId,
+      'catalog_uid': x.uid,
+      'name': p.name,
+      'barcode': p.barcode,
+      'category': p.category,
+      'json': jsonEncode({...p.toJson(), 'uid': x.uid}),
+    });
+  }
 }
 
 /// Makes the product in the shop with its first batch, then each further batch.
@@ -227,6 +240,7 @@ Future<PushResult> pushCreate(Db db, SuiteClient c, Shop s, Draft d) async {
   final first = stock.isEmpty ? null : stock.first;
   final item = await c.intakeCreate(body, quantity: first?.qty ?? '', expiry: first?.expiry ?? '');
   final id = (item['productId'] as num).toInt();
+  d.remoteId = id;
   // Intake makes the product alone: packs and extra barcodes go on after. One
   // refused is reported, the product stays.
   final notes = <String>[];
@@ -250,11 +264,13 @@ Future<PushResult> pushCreate(Db db, SuiteClient c, Shop s, Draft d) async {
       notes.add('Barcode $code: ${e.message}');
     }
   }
-  await keepCopy(db, s, d.product);
-  return _batches(c, id, d.product, [
+  await keepCopy(db, s, d.product, remoteId: id);
+  final r = await _batches(c, id, d.product, [
     for (final (i, b) in stock.indexed)
       if (i > 0) (i, b),
   ], sup);
+  r.notes.addAll(notes);
+  return r;
 }
 
 Future<PushResult> _batches(SuiteClient c, int id, CatalogProduct p, List<(int, StockBatch)> todo, int sup) async {
@@ -296,7 +312,7 @@ Future<void> pushUpdate(Db db, SuiteClient c, Shop s, Draft d) async {
   final cur = await c.product(d.remoteId);
   final body = await productBody(c, s, d, sup == 0 ? ((cur['supplierId'] as num?)?.toInt() ?? 0) : sup, create: false);
   await c.updateProduct(d.remoteId, {...cur, ...body});
-  await keepCopy(db, s, d.product);
+  await keepCopy(db, s, d.product, remoteId: d.remoteId);
 }
 
 /// Saves the work for when the shop can be reached.

@@ -135,6 +135,11 @@ class Db {
       await t.insert('shop_products', {...r, 'shop_uid': shopUid}, conflictAlgorithm: ConflictAlgorithm.replace);
     }
   });
+
+  /// One product in the shop's list, after a push (so it shows before the next pull).
+  Future<void> putShopProduct(String shopUid, Map<String, Object?> row) =>
+      raw.insert('shop_products', {...row, 'shop_uid': shopUid}, conflictAlgorithm: ConflictAlgorithm.replace);
+
   Future<List<Map<String, Object?>>> shopProducts(String shopUid) =>
       raw.query('shop_products', where: 'shop_uid = ?', whereArgs: [shopUid], orderBy: 'name COLLATE NOCASE');
 
