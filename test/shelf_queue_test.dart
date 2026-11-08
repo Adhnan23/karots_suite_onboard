@@ -48,7 +48,9 @@ void main() {
   }
 
   // A new product is filed under a category first.
-  final filed = <String, Object? Function(dynamic, String)>{'POST /api/v1/admin/categories/quick': (_, _) => {'id': 9}};
+  final filed = <String, Object? Function(dynamic, String)>{
+    'POST /api/v1/admin/categories/quick': (_, _) => {'id': 9},
+  };
 
   test('a Shelf pull fills the shop\'s list only: no catalogue, no review, no Alternatives', () async {
     shop.routes = {
@@ -102,7 +104,10 @@ void main() {
   });
 
   test('a barcode someone else added meanwhile stays in the queue with the shop\'s reason', () async {
-    shop.routes = {...filed, 'POST /api/v1/admin/inventory/intake/create': (r, _) => refuse(r, 409, 'CONFLICT', 'Barcode 111 is already on Panadol 500mg')};
+    shop.routes = {
+      ...filed,
+      'POST /api/v1/admin/inventory/intake/create': (r, _) => refuse(r, 409, 'CONFLICT', 'Barcode 111 is already on Panadol 500mg'),
+    };
     await queue(
       db,
       s,
