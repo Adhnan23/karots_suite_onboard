@@ -45,6 +45,8 @@ void main() {
       'POST /api/v1/admin/categories/quick': (_, _) => {'id': nextCat++},
       'POST /api/v1/admin/suppliers': (_, _) => {'id': 33},
       'POST /api/v1/admin/inventory/intake/create': (_, _) => {'productId': 70, 'name': 'Amoxil'},
+      'POST /api/v1/admin/products/70/packs': (_, _) => {'id': 1},
+      'POST /api/v1/admin/products/70/barcodes': (_, _) => {'barcode': 'x'},
       'POST /api/v1/admin/inventory/intake/restock': (r, _) {
         restocks++;
         if (failSecondRestock && restocks == 2) {
@@ -66,6 +68,7 @@ void main() {
     product: CatalogProduct(
       name: 'Amoxil 250',
       barcode: '555',
+      barcodes: ['556'],
       category: 'Medicine > Antibiotic',
       unit: 'pcs',
       cost: '20',
@@ -107,6 +110,12 @@ void main() {
         'values': {'generic_name': 'Amoxicillin'},
       },
     });
+    expect(sent('/api/v1/admin/products/70/packs'), [
+      {'name': 'Card', 'size': '10', 'sellingPrice': '240', 'wholesalePrice': '', 'barcode': 'C1'},
+    ], reason: 'intake makes the product only: its packs go on after');
+    expect(sent('/api/v1/admin/products/70/barcodes'), [
+      {'barcode': '556', 'source': ''},
+    ]);
     final rs = sent('/api/v1/admin/inventory/intake/restock');
     expect(
       [for (final x in rs) (x['quantity'], x['expiry'], x['costPrice'], x['sellingPrice'])],

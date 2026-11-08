@@ -3,6 +3,8 @@ import '../data/models.dart';
 import '../suite/client.dart';
 import 'match.dart';
 
+const stockTakeOff = 'Turn on Stock-take on this shop first';
+
 class PushError implements Exception {
   PushError(this.message);
   final String message;
@@ -83,6 +85,9 @@ class PushResult {
   PushResult(this.productId, this.failed);
   final int productId;
   final List<FailedBatch> failed;
+
+  /// Packs or barcodes the shop refused (the product and its stock stand).
+  final notes = <String>[];
 }
 
 int _unitId(Shop s, String unit) {
@@ -177,12 +182,35 @@ Future<void> keepCopy(Db db, Shop s, CatalogProduct p) async {
 /// Old stock only (intake): no money, no supplier bill.
 Future<PushResult> pushCreate(Db db, SuiteClient c, Shop s, Draft d) async {
   final stock = d.stock;
-  if (stock.isNotEmpty && s.snapshot['stockTake'] == false) throw PushError('Turn on Stock-take on this shop first');
+  if (stock.isNotEmpty && s.snapshot['stockTake'] == false) throw PushError(stockTakeOff);
   final sup = await _supplier(db, c, d);
   final body = await productBody(c, s, d, sup);
   final first = stock.isEmpty ? null : stock.first;
   final item = await c.intakeCreate(body, quantity: first?.qty ?? '', expiry: first?.expiry ?? '');
   final id = (item['productId'] as num).toInt();
+  // Intake makes the product alone: packs and extra barcodes go on after. One
+  // refused is reported, the product stays.
+  final notes = <String>[];
+  for (final k in d.product.packs) {
+    try {
+      await c.post('/admin/products/$id/packs', {
+        'name': k.name,
+        'size': k.size,
+        'sellingPrice': k.selling,
+        'wholesalePrice': k.wholesale,
+        'barcode': k.barcode,
+      });
+    } on SuiteError catch (e) {
+      notes.add('Pack ${k.name}: ${e.message}');
+    }
+  }
+  for (final code in d.product.barcodes) {
+    try {
+      await c.post('/admin/products/$id/barcodes', {'barcode': code, 'source': ''});
+    } on SuiteError catch (e) {
+      notes.add('Barcode $code: ${e.message}');
+    }
+  }
   await keepCopy(db, s, d.product);
   return _batches(c, id, d.product, [
     for (final (i, b) in stock.indexed)

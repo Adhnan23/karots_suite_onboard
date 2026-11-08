@@ -53,13 +53,15 @@ void main() {
     final shop = FakeShop();
     await shop.start();
     shop.routes = {
-      'POST /api/v1/x/alternatives': (_, _) => {'id': 5, 'name': 'P', 'tiers': []},
-      'POST /api/v1/x/alternatives/5/tiers': (_, _) => {
+      // a new group comes with its first tier, unnamed
+      'POST /api/v1/x/alternatives': (_, _) => {
         'id': 5,
+        'name': 'P',
         'tiers': [
-          {'id': 12, 'name': 'Tablets', 'members': []},
+          {'id': 12, 'name': '', 'members': []},
         ],
       },
+      'PUT /api/v1/x/alternatives/tiers/12': (_, _) => {'id': 5, 'tiers': []},
       'POST /api/v1/x/alternatives/tiers/12/members': (_, _) => {'id': 5, 'tiers': []},
     };
     final id = await SuiteClient(shop.url).createAlternative('P', 'Tablets', [70, 71]);
@@ -69,6 +71,8 @@ void main() {
         if (c.$2.endsWith('/members')) jsonDecode(c.$4)['productId'],
     ];
     expect(members, [70, 71]);
+    expect(jsonDecode(shop.calls.firstWhere((c) => c.$1 == 'PUT').$4)['name'], 'Tablets');
+    expect(shop.calls.where((c) => c.$2.endsWith('/tiers')), isEmpty, reason: 'no second tier');
     await shop.server.close(force: true);
   });
 }

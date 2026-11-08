@@ -92,9 +92,13 @@ void main() {
       'POST /api/v1/auth/login': (r, body) {
         if ((jsonDecode(body) as Map)['pin'] != '2273') {
           r.response.statusCode = 401;
-          return {'error': {'code': 'UNAUTHORIZED', 'message': 'wrong PIN'}};
+          return {
+            'error': {'code': 'UNAUTHORIZED', 'message': 'wrong PIN'},
+          };
         }
-        return {'user': {'id': 1}};
+        return {
+          'user': {'id': 1},
+        };
       },
     };
     await SuiteClient(shop.url).signIn('sec', 'AB12CD34');

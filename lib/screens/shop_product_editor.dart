@@ -103,12 +103,39 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
           if (again != true) break;
           r = await retryBatches(c, r);
         }
-        if (mounted) toast(context, '${p.name} is in ${s.name}');
+        if (mounted)
+          toast(
+            context,
+            r.notes.isEmpty ? '${p.name} is in ${s.name}' : '${p.name} is in ${s.name}, but: ${r.notes.join('; ')}',
+            error: r.notes.isNotEmpty,
+          );
       } else {
         await pushUpdate(app.db, c, s, d);
         if (mounted) toast(context, '${p.name} changed in ${s.name}');
       }
       if (mounted) Navigator.pop(context, true);
+    } on PushError catch (e) {
+      if (!mounted) return;
+      if (e.message != stockTakeOff || c == null) return toast(context, e.message, error: true);
+      final on = await showDialog<bool>(
+        context: context,
+        builder: (x) => AlertDialog(
+          title: Text('Turn on Stock-take in ${s.name}?'),
+          content: const Text('Old stock goes in through stock intake, which works only with Stock-take on (Settings → Stock-take).'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(x, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(x, true), child: const Text('Turn on')),
+          ],
+        ),
+      );
+      if (on != true) return;
+      await c.enableStockTake();
+      s.snapshot['stockTake'] = true;
+      await app.db.saveShop(s);
+      if (mounted) {
+        setState(() => busy = false);
+        return save();
+      }
     } catch (e) {
       if (mounted) toast(context, errText(e), error: true);
     } finally {

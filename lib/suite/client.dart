@@ -131,6 +131,13 @@ class SuiteClient {
 
   // ---- writes ----
 
+  /// Settings → Stock-take on: intake (old stock) works only with it.
+  Future<void> enableStockTake() async {
+    final s = (await get('/admin/settings') as Map)['settings'] as Map; // the page wraps them
+    if (s['stockTakeEnabled'] == true) return;
+    await put('/admin/settings', {...s, 'stockTakeEnabled': true});
+  }
+
   /// A new product and its first batch of old stock (no money).
   Future<Map> intakeCreate(Map product, {String quantity = '', String expiry = ''}) async =>
       await post('/admin/inventory/intake/create', {'product': product, 'quantity': quantity, 'expiry': expiry}) as Map;
@@ -177,8 +184,16 @@ class SuiteClient {
   Future<int> createAlternative(String name, String tier, List<int> productIds) async {
     final g = await post('/x/alternatives', {'name': name}) as Map;
     final gid = (g['id'] as num).toInt();
-    final grp = await post('/x/alternatives/$gid/tiers', {'name': tier, 'reorderLevel': 0}) as Map; // answers with the group
-    final tid = ((grp['tiers'] as List).last as Map)['id'] as num;
+    final tiers = g['tiers'] as List? ?? [];
+    num tid;
+    if (tiers.isNotEmpty) {
+      // A new group comes with its first tier, unnamed: name it.
+      tid = (tiers.first as Map)['id'] as num;
+      await put('/x/alternatives/tiers/${tid.toInt()}', {'name': tier, 'reorderLevel': 0});
+    } else {
+      final grp = await post('/x/alternatives/$gid/tiers', {'name': tier, 'reorderLevel': 0}) as Map; // answers with the group
+      tid = ((grp['tiers'] as List).last as Map)['id'] as num;
+    }
     for (final id in productIds) {
       await post('/x/alternatives/tiers/${tid.toInt()}/members', {'productId': id, 'move': true});
     }
