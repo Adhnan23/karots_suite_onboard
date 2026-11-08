@@ -15,6 +15,14 @@ import 'account.dart';
 import 'connect_screen.dart';
 import 'lock_screen.dart';
 
+/// What the shop's page says when signing in at unlock was refused; '' when the
+/// shop just isn't in reach (then work waits in the queue, nothing to say).
+String connectProblem(Object e) {
+  if (e is! SuiteError) return '';
+  if (e.status == 401) return "Your PIN was changed on the shop's PC: lock, then sign in again with the new one";
+  return e.message;
+}
+
 /// Karots Shelf's frame: sign in → lock → the shop's page. Locks after
 /// [idleLock] with no touches; the PIN is held only while unlocked.
 class ShelfApp extends StatefulWidget {
@@ -89,9 +97,12 @@ class _ShelfAppState extends State<ShelfApp> {
     setState(() => open = true);
     try {
       await a.connectPerson(shop!);
-    } catch (_) {
-      // Offline (or refused): work goes in the queue; the shop's page says so.
+      a.connectProblem = '';
+    } catch (e) {
+      // Offline: work goes in the queue. Refused: the shop's page says why.
+      a.connectProblem = connectProblem(e);
     }
+    a.changed();
   }
 
   void lock() {

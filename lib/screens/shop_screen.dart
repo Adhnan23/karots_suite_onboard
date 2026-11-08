@@ -142,6 +142,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     ],
                   ),
                 ],
+                if (isShelf && app.connectProblem.isNotEmpty) ...[const SizedBox(height: 10), Tag(app.connectProblem, tone: c.danger)],
                 if (snap['stockTake'] == false) ...[const SizedBox(height: 10), Tag('Stock-take is off: old stock can\'t be added', tone: c.warning)],
                 const SizedBox(height: 14),
                 Row(
@@ -159,7 +160,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           : FilledButton.icon(
                               onPressed: () async {
                                 if (isShelf) {
-                                  await guard(context, () => app.connectPerson(s));
+                                  if (await guard(context, () => app.connectPerson(s)) != null) app.connectProblem = '';
                                 } else if (await connectShop(context, s)) {
                                   setState(() {});
                                 }

@@ -41,7 +41,9 @@ void main() {
     final who = (await t.runAsync(
       () => ShelfAccount.make(address: shop.address, phone: '0771111111', name: 'Nimali', role: 'cashier', pin: '1234'),
     ))!;
-    final app = AppState(db, MemoryStore())..person = who;
+    final app = AppState(db, MemoryStore())
+      ..person = who
+      ..connectProblem = "Your PIN was changed on the shop's PC: lock, then sign in again with the new one";
     final accounts = ShelfAccounts(MemoryStore());
     final screens = <String, Widget>{
       'shelf-connect': ShelfConnectScreen(device: 'd', onSignedIn: (_, _, _, _, _) {}),

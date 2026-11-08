@@ -122,6 +122,9 @@ class AppState extends ChangeNotifier {
   /// The person whose sign-in sends the queue ('' in Onboard).
   String get who => isShelf ? person?.phone ?? '' : '';
 
+  /// Karots Shelf: why the shop refused the sign-in at unlock ('' = none).
+  String connectProblem = '';
+
   /// Karots Shelf: this phone's own id, and what locks the app now.
   String shelfDevice = '';
   VoidCallback? lockNow;
