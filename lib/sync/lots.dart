@@ -50,7 +50,10 @@ String _s(BigInt v) {
 /// the Suite's Set count), its expiry and its price. Only what changed is sent.
 Future<void> editLot(SuiteClient c, int productId, ProductStock s, Lot lot, {String? count, String? expiry, String? price}) async {
   if (count != null && _q(count) != _q(lot.qty)) {
-    final total = _q(s.total) - _q(lot.qty) + _q(count);
+    // The stock as it is now (a sale since the page opened changes it).
+    final now = await productStock(c, productId);
+    final live = now.lots.where((l) => l.id == lot.id).firstOrNull ?? lot;
+    final total = _q(now.total) - _q(live.qty) + _q(count);
     await c.post('/admin/stock/adjust', {'productId': productId, 'newQuantity': _s(total), 'batchId': lot.id, 'note': 'Set in Karots Onboard'});
   }
   if (expiry != null && expiry.trim() != lot.expiry) {

@@ -70,7 +70,7 @@ class TeamSync extends ChangeNotifier {
   List<Peer> get peers => _peers.values.toList();
 
   Future<void> start() async {
-    final h = await SyncHost.start(db, port: port, code: key);
+    final h = await SyncHost.start(db, port: port, code: key, maxWrong: null); // a 12-character key can't be guessed
     _host = h;
     port = h.port;
     if (discover) {

@@ -96,7 +96,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
                         ),
                         trailing: app.connected(s) ? Tag('Connected', tone: c.success) : const Icon(Icons.chevron_right_rounded),
                         onTap: () async {
-                          await Navigator.push(context, MaterialPageRoute(builder: (_) => ShopScreen(shop: s)));
+                          await Navigator.push(context, MaterialPageRoute(builder: (_) => ShopScreen(shop: app.live(s))));
                           load();
                         },
                       ),

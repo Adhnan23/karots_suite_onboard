@@ -213,12 +213,11 @@ Future<int> pushSupplier(Db db, SuiteClient c, Shop s, CatalogSupplier sup) asyn
 /// the shop's own list, so a pushed product shows there before the next pull.
 Future<void> keepCopy(Db db, Shop s, CatalogProduct p, {int remoteId = 0}) async {
   final hit = await matchProduct(db, codes: p.allCodes, name: p.name);
-  final x = hit ?? CatalogProduct.fromJson({...p.toJson(), 'uid': p.uid});
+  final x = hit ?? CatalogProduct.fromJson({...p.toJson(), 'uid': p.uid, 'cost': ''}); // cost is the shop's, never the catalogue's
   if (hit != null) {
     x
       ..name = p.name
       ..category = p.category.isEmpty ? x.category : p.category
-      ..cost = p.cost
       ..selling = p.selling
       ..wholesale = p.wholesale;
     for (final e in p.fields.entries) {
@@ -326,6 +325,8 @@ Future<void> pushUpdate(Db db, SuiteClient c, Shop s, Draft d) async {
   final sup = await _supplier(db, c, s, d);
   final cur = await c.product(d.remoteId);
   final body = await productBody(db, c, s, d, sup == 0 ? ((cur['supplierId'] as num?)?.toInt() ?? 0) : sup, create: false);
+  // A blank price never wipes the shop's own (cost is often left blank here).
+  body.removeWhere((k, v) => const {'costPrice', 'sellingPrice', 'wholesalePrice', 'taxRate'}.contains(k) && '$v'.trim().isEmpty);
   await c.updateProduct(d.remoteId, {...cur, ...body});
   // Packs and barcodes go on separately: add what the shop hasn't got (removing
   // one stays a job for the shop's own form).

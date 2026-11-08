@@ -30,4 +30,17 @@ void main() {
     await pc.close();
     await phone.close();
   });
+
+  test('five wrong codes close the device for syncing', () async {
+    final pc = await Db.openWith(path: '${Directory.systemTemp.createTempSync('pc').path}/onboard.db', factory: databaseFactoryFfi);
+    final phone = await Db.openWith(path: '${Directory.systemTemp.createTempSync('ph').path}/onboard.db', factory: databaseFactoryFfi);
+    final host = await SyncHost.start(pc, port: 0, code: '123456');
+    for (var i = 0; i < 5; i++) {
+      await expectLater(syncWith(phone, 'http://127.0.0.1:${host.port}', '00000$i'), throwsA(isA<SyncError>()));
+    }
+    expect(host.closed, isTrue);
+    await expectLater(syncWith(phone, 'http://127.0.0.1:${host.port}', '123456'), throwsA(anything));
+    await pc.close();
+    await phone.close();
+  });
 }

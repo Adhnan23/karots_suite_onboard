@@ -51,7 +51,9 @@ Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {void Function(String)?
   final mine = <Map<String, Object?>>[];
   for (final (i, r) in rows.indexed) {
     final remoteId = r.id > 0 ? r.id : -(i + 1);
+    final shopCost = r.product.cost; // the shop's own list here keeps it; the catalogue never does
     final p = r.product
+      ..cost = ''
       ..kinds = {...kinds}
       ..sources = {shop.uid}
       ..packs = [
@@ -84,7 +86,7 @@ Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {void Function(String)?
       'name': p.name,
       'barcode': p.barcode,
       'category': p.category,
-      'json': jsonEncode({...p.toJson(), 'openingQty': r.openingQty}),
+      'json': jsonEncode({...p.toJson(), 'cost': shopCost, 'openingQty': r.openingQty}),
     });
   }
   await db.replaceShopProducts(shop.uid, mine);

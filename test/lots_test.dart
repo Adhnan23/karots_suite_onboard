@@ -59,4 +59,22 @@ void main() {
     ]);
     expect(sent('/api/v1/admin/stock/batches/2/price'), isEmpty, reason: 'unchanged');
   });
+
+  test('a count is set from the stock as it is now, not as the page first read it', () async {
+    final s = await productStock(SuiteClient(shop.url), 70); // total 50 then
+    var calls = 0;
+    shop.routes['GET /api/v1/admin/stock/lots/70'] = (_, _) {
+      calls++;
+      return {
+        'stockQty': '45', // 5 sold since, from lot 1
+        'lots': [
+          {'id': 1, 'qtyRemaining': '25', 'expiryDate': '', 'costPrice': '20.00', 'sellingPrice': ''},
+          {'id': 2, 'qtyRemaining': '20', 'expiryDate': '', 'costPrice': '21.00', 'sellingPrice': ''},
+        ],
+      };
+    };
+    await editLot(SuiteClient(shop.url), 70, s, s.lots[1], count: '12');
+    expect(calls, 1);
+    expect(sent('/api/v1/admin/stock/adjust').single['newQuantity'], '37', reason: '45 now, less 20 in this lot, plus 12');
+  });
 }

@@ -326,4 +326,32 @@ void main() {
     expect(shop.calls.where((c) => c.$1 == 'DELETE' && c.$2 == '/api/v1/admin/products/70').length, 1);
     expect(await db.shopProducts(s.uid), isEmpty);
   });
+
+  test('the catalogue never keeps a shop\'s cost (it differs by supplier and changes)', () async {
+    await pushCreate(db, SuiteClient(shop.url), s, draft());
+    expect((await db.products()).single.cost, '');
+    expect((await db.products()).single.selling, '25');
+  });
+
+  test('a change with a blank cost or price keeps the shop\'s own', () async {
+    shop.routes['GET /api/v1/admin/products/70'] = (_, _) => {
+      'id': 70,
+      'name': 'Amoxil',
+      'costPrice': '20.00',
+      'sellingPrice': '25.00',
+      'supplierId': 0,
+    };
+    shop.routes['PUT /api/v1/admin/products/70'] = (_, _) => {'id': 70};
+    await pushUpdate(
+      db,
+      SuiteClient(shop.url),
+      s,
+      Draft(
+        product: CatalogProduct(name: 'Amoxil 250', unit: 'pcs', selling: '26'),
+        remoteId: 70,
+      ),
+    );
+    final put = jsonDecode(shop.calls.lastWhere((c) => c.$1 == 'PUT').$4) as Map;
+    expect((put['name'], put['costPrice'], put['sellingPrice']), ('Amoxil 250', '20.00', '26'));
+  });
 }

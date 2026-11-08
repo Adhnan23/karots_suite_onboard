@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../state.dart';
@@ -16,6 +18,7 @@ class SyncHostScreen extends StatefulWidget {
 class _SyncHostScreenState extends State<SyncHostScreen> {
   SyncHost? host;
   AppState? app;
+  Timer? tick; // notices when it closed itself after wrong codes
   List<String> addresses = [];
   String error = '';
 
@@ -37,6 +40,7 @@ class _SyncHostScreenState extends State<SyncHostScreen> {
           host = h;
           addresses = a;
         });
+        tick = Timer.periodic(const Duration(seconds: 2), (_) => mounted ? setState(() {}) : null);
       } catch (e) {
         if (mounted) setState(() => error = 'Couldn\'t open for syncing: ${errText(e)}');
       }
@@ -45,6 +49,7 @@ class _SyncHostScreenState extends State<SyncHostScreen> {
 
   @override
   void dispose() {
+    tick?.cancel();
     host?.stop();
     app?.changed(); // what the other device sent shows in the lists
     super.dispose();
@@ -62,7 +67,9 @@ class _SyncHostScreenState extends State<SyncHostScreen> {
           children: [
             if (error.isNotEmpty) Text(error, style: TextStyle(color: c.danger)),
             if (h == null && error.isEmpty) const LinearProgressIndicator(),
-            if (h != null) ...[
+            if (h != null && h.closed)
+              Text('Closed after 5 wrong codes. Go back and open it again for a new code.', style: TextStyle(color: c.danger)),
+            if (h != null && !h.closed) ...[
               Text('On the other device: Shops → Backup → Sync with a device, and type these.', style: TextStyle(color: c.mutedForeground)),
               const SizedBox(height: 16),
               Section(

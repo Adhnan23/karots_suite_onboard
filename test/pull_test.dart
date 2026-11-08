@@ -87,6 +87,7 @@ void main() {
     final rev = await db.reviews();
     final p = CatalogProduct.fromJson(rev.firstWhere((x) => x.kind == 'product').data);
     expect(p.name, 'Amoxil 250');
+    expect(p.cost, '', reason: 'no shop\'s cost into the catalogue');
     expect(p.packs.single.name, 'Card');
     expect(p.packs.single.barcode, 'C8');
     expect(p.fields, {'Generic name': 'Amoxicillin'});
@@ -99,6 +100,7 @@ void main() {
     expect(saved.snapshot['ai']['namingStyle'], 'Brand Strength Form');
     expect(saved.lastPull, isNotNull);
     expect((await db.shopProducts(s.uid)).map((x) => x['remote_id']), [8, 7]);
+    expect((await db.shopProducts(s.uid)).first['json'], contains('"cost":"20.00"'), reason: 'the shop\'s own list keeps its cost');
     // the matched product now knows it is in this shop
     expect((await db.productByBarcode('111'))!.sources, {s.uid});
 

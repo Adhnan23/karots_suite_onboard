@@ -20,19 +20,32 @@ String newSyncCode() => (Random.secure().nextInt(900000) + 100000).toString();
 /// This device, open to another on the same network while the screen is open:
 /// it hands its backup out and merges one in, only with the code.
 class SyncHost {
-  SyncHost._(this._server, this.code);
+  SyncHost._(this._server, this.code, this.maxWrong) : port = _server.port;
   final HttpServer _server;
+
+  /// The port it listened on (kept: the server forgets it once closed).
+  final int port;
   final String code;
-  int get port => _server.port;
+
+  /// Wrong codes allowed before it closes (null: none counted, for the team's long key).
+  final int? maxWrong;
+  int _wrong = 0;
+  bool closed = false;
   static const defaultPort = 8765;
 
-  static Future<SyncHost> start(Db db, {int port = defaultPort, String? code}) async {
+  static Future<SyncHost> start(Db db, {int port = defaultPort, String? code, int? maxWrong = 5}) async {
     final s = await HttpServer.bind(InternetAddress.anyIPv4, port);
-    final h = SyncHost._(s, code ?? newSyncCode());
+    final h = SyncHost._(s, code ?? newSyncCode(), maxWrong);
     s.listen((r) async {
       try {
         if (r.headers.value('x-sync-code') != h.code) {
           r.response.statusCode = 403;
+          // A short code can be guessed: after a few wrong ones, stop answering.
+          if (h.maxWrong != null && ++h._wrong >= h.maxWrong!) {
+            await r.response.close();
+            await h.stop();
+            return;
+          }
         } else if (r.method == 'GET' && r.uri.path == '/backup') {
           r.response.headers.contentType = ContentType.json;
           r.response.write(await exportBackup(db));
@@ -52,7 +65,10 @@ class SyncHost {
     return h;
   }
 
-  Future<void> stop() => _server.close(force: true);
+  Future<void> stop() async {
+    closed = true;
+    await _server.close(force: true);
+  }
 
   /// This device's addresses on the local network, for the other one to type.
   static Future<List<String>> addresses() async => [

@@ -69,7 +69,7 @@ void main() {
       );
       final r = await pushCreate(db, c, shop, d);
       expect(r.failed, isEmpty);
-    expect(r.notes, isEmpty, reason: 'every pack and barcode taken');
+      expect(r.notes, isEmpty, reason: 'every pack and barcode taken');
       final p = await c.product(r.productId);
       expect(p['name'], 'Onboard Test $tag');
       expect('${p['stockQty']}', anyOf('10', '10.000', '10.00'));

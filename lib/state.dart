@@ -8,6 +8,7 @@ import 'suite/client.dart';
 import 'sync/auto_pull.dart';
 import 'sync/team.dart';
 import 'sync/pull.dart';
+import 'sync/push.dart';
 import 'theme/mode.dart';
 
 /// What every screen reaches: the database, the secret store, and the signed-in
@@ -69,6 +70,11 @@ class AppState extends ChangeNotifier {
   void pushed(Shop s) => _pullers[s.uid]?.kick();
 
   SuiteClient? session(Shop s) => _sessions[s.uid];
+
+  /// The one copy of a connected shop that its background pull keeps fresh; pages
+  /// opened for it use this, so a save never puts back an older copy.
+  Shop live(Shop s) => _live[s.uid] ?? s;
+  final _live = <String, Shop>{};
   bool connected(Shop s) => _sessions.containsKey(s.uid);
 
   /// Signs in as the system user; fills the shop's install id the first time.
@@ -87,16 +93,23 @@ class AppState extends ChangeNotifier {
       rethrow;
     }
     _sessions[s.uid] = c;
+    _live[s.uid] = s;
     _pullers.remove(s.uid)?.stop();
-    _pullers[s.uid] = AutoPuller(() => pull(db, c, s))
-      ..addListener(notifyListeners)
-      ..start();
+    // Work saved while out of reach goes first, then the pull brings the shop back.
+    _pullers[s.uid] =
+        AutoPuller(() async {
+            await flushPending(db, c, s);
+            await pull(db, c, s);
+          })
+          ..addListener(notifyListeners)
+          ..start();
     notifyListeners();
     return c;
   }
 
   void disconnect(Shop s) {
     _sessions.remove(s.uid);
+    _live.remove(s.uid);
     _pullers.remove(s.uid)?.stop();
     notifyListeners();
   }
