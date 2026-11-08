@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'app.dart';
+import 'data/db.dart';
+import 'state.dart';
 import 'lock/lock_screen.dart';
 import 'settings/secure.dart';
 import 'theme/app_theme.dart';
@@ -16,6 +18,12 @@ class OnboardApp extends StatefulWidget {
 class _OnboardAppState extends State<OnboardApp> {
   final store = SecureStore();
   bool open = false;
+  AppState? app;
+
+  Future<void> unlock() async {
+    app ??= AppState(await Db.open(), store);
+    setState(() => open = true);
+  }
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -23,6 +31,6 @@ class _OnboardAppState extends State<OnboardApp> {
     debugShowCheckedModeBanner: false,
     theme: ksTheme(Brightness.light),
     darkTheme: ksTheme(Brightness.dark),
-    home: open ? AppHome(store: store) : LockScreen(store: store, onOpen: () => setState(() => open = true)),
+    home: open && app != null ? AppScope(state: app!, child: const AppHome()) : LockScreen(store: store, onOpen: unlock),
   );
 }

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'settings/secure.dart';
+import 'screens/shops_screen.dart';
 
 /// The app after unlock: Shops, Catalogue, Review, Duplicates. Phone = bottom bar,
 /// wide = side rail.
 class AppHome extends StatefulWidget {
-  const AppHome({super.key, required this.store});
-  final KeyStore store;
+  const AppHome({super.key});
   @override
   State<AppHome> createState() => _AppHomeState();
 }
@@ -20,7 +19,10 @@ class _AppHomeState extends State<AppHome> {
     (Icons.merge_type_outlined, Icons.merge_type, 'Duplicates'),
   ];
 
-  Widget page(int i) => Center(child: Text(dests[i].$3));
+  Widget page(int i) => switch (i) {
+    0 => const ShopsScreen(),
+    _ => Center(child: Text(dests[i].$3)),
+  };
 
   @override
   Widget build(BuildContext context) {
