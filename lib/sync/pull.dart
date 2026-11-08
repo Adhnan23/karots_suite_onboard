@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../data/db.dart';
 import '../data/models.dart';
+import '../flavor.dart';
 import '../suite/client.dart';
 import 'match.dart';
 import 'suite_csv.dart';
@@ -31,7 +32,7 @@ Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {void Function(String)?
     'units': await c.units(),
     'suppliers': await c.supplierOptions(),
     'fields': fields,
-    'alternatives': has('alternatives') ? await c.alternatives() : [],
+    'alternatives': has('alternatives') && !isShelf ? await c.alternatives() : [], // Shelf has no Alternatives
     'ai': has('aicatalog') ? await c.aiSettings() : {},
   };
 
@@ -66,8 +67,11 @@ Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {void Function(String)?
             barcode: (k['barcodes'] as List? ?? []).isEmpty ? '' : '${(k['barcodes'] as List).first}',
           ),
       ];
-    final hit = match.find(codes: p.allCodes, name: p.name);
-    if (hit != null) {
+    // Karots Shelf keeps the shop's own list only: no catalogue, no Review.
+    final hit = isShelf ? null : match.find(codes: p.allCodes, name: p.name);
+    if (isShelf) {
+      known++;
+    } else if (hit != null) {
       known++;
       if (!hit.sources.contains(shop.uid) || !hit.kinds.containsAll(kinds)) {
         hit.sources.add(shop.uid);
@@ -90,6 +94,12 @@ Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {void Function(String)?
     });
   }
   await db.replaceShopProducts(shop.uid, mine);
+
+  if (isShelf) {
+    shop.lastPull = DateTime.now();
+    await db.saveShop(shop);
+    return PullResult(known, 0, 0, 0);
+  }
 
   step?.call('Reading suppliers');
   final have = {for (final s in await db.suppliers()) normName(s.name)};

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../data/drafts.dart';
 import '../data/models.dart';
+import '../flavor.dart';
 import '../input/supplier_field.dart';
 import '../state.dart';
+import '../suite/client.dart';
 import '../sync/match.dart';
 import '../sync/push.dart';
 import '../theme/tokens.dart';
@@ -106,7 +108,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
     setState(() => busy = true);
     try {
       if (c == null) {
-        await queue(app.db, s, isNew ? 'create' : 'update', d);
+        await queue(app.db, s, isNew ? 'create' : 'update', d, who: app.who);
         if (mounted) toast(context, 'Saved to push when ${s.name} is connected');
       } else if (isNew) {
         var r = await pushCreate(app.db, c, s, d);
@@ -140,6 +142,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
     } on PushError catch (e) {
       if (!mounted) return;
       if (e.message != stockTakeOff || c == null) return toast(context, e.message, error: true);
+      if (!app.mayChangeSettings) return toast(context, 'Ask the owner to turn on Stock-take (Settings)', error: true);
       final on = await showDialog<bool>(
         context: context,
         builder: (x) => AlertDialog(
@@ -160,6 +163,17 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
         return save();
       }
     } catch (e) {
+      // Shelf: walked out of the Wi-Fi. Nothing reached the shop yet (or it's a
+      // change, safe to send again): it waits in the queue instead.
+      if (isShelf && e is! SuiteError && (!isNew || d.remoteId == 0)) {
+        await queue(app.db, s, isNew ? 'create' : 'update', d, who: app.who);
+        if (widget.keepDraft) shopNewDrafts.remove(s.uid);
+        if (mounted) {
+          toast(context, 'Out of reach: saved to push when ${s.name} is back');
+          Navigator.pop(context, true);
+        }
+        return;
+      }
       if (mounted) toast(context, errText(e), error: true);
     } finally {
       if (mounted) setState(() => busy = false);

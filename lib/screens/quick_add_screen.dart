@@ -116,10 +116,11 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
     final d = quickDraft(p, cost: cost.text, price: price.text, qty: qty.text, expiry: expiry.text);
     final c = app.session(s);
     if (c == null) {
-      await queue(app.db, s, 'create', d);
+      await queue(app.db, s, 'create', d, who: app.who);
       if (mounted) toast(context, '${p.name}: saved to push later');
     } else {
       if (d.stock.isNotEmpty && s.snapshot['stockTake'] == false) {
+        if (!app.mayChangeSettings) return toast(context, 'Ask the owner to turn on Stock-take (Settings)', error: true);
         final on = await showDialog<bool>(
           context: context,
           builder: (x) => AlertDialog(

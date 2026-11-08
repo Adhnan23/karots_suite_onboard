@@ -27,7 +27,7 @@ class Db {
     path ??= p.join((await getApplicationSupportDirectory()).path, 'onboard.db');
     final raw = await f.openDatabase(
       path,
-      options: OpenDatabaseOptions(version: 4, onCreate: (d, _) => _create(d), onUpgrade: _upgrade),
+      options: OpenDatabaseOptions(version: 5, onCreate: (d, _) => _create(d), onUpgrade: _upgrade),
     );
     return Db._(raw);
   }
@@ -60,7 +60,7 @@ class Db {
          barcode TEXT, category TEXT, json TEXT, PRIMARY KEY(shop_uid, remote_id))''',
       'CREATE TABLE review(uid TEXT PRIMARY KEY, shop_uid TEXT, kind TEXT, key TEXT, json TEXT, status TEXT)',
       'CREATE INDEX review_key ON review(kind, key)',
-      'CREATE TABLE pending(uid TEXT PRIMARY KEY, shop_uid TEXT, op TEXT, json TEXT, error TEXT, created_at TEXT)',
+      'CREATE TABLE pending(uid TEXT PRIMARY KEY, shop_uid TEXT, op TEXT, json TEXT, error TEXT, created_at TEXT, who TEXT NOT NULL DEFAULT \'\')',
       _deletedTable,
       _offersTable,
     ]) {
@@ -75,6 +75,10 @@ class Db {
 
   static Future<void> _upgrade(Database d, int from, int to) async {
     if (from < 4) await d.execute(_offersTable);
+    if (from < 5) {
+      final cols = await d.rawQuery('PRAGMA table_info(pending)');
+      if (cols.isNotEmpty && !cols.any((c) => c['name'] == 'who')) await d.execute("ALTER TABLE pending ADD COLUMN who TEXT NOT NULL DEFAULT ''");
+    }
     if (from < 2) await d.execute('ALTER TABLE shops ADD COLUMN secret_name TEXT');
     if (from < 3) await d.execute(_deletedTable);
   }

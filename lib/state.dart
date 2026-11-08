@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'data/db.dart';
 import 'data/models.dart';
+import 'flavor.dart';
 import 'settings/secrets.dart';
 import 'shelf/account.dart';
 import 'settings/secure.dart';
@@ -114,6 +115,13 @@ class AppState extends ChangeNotifier {
   ShelfAccount? person;
   String? personPin;
 
+  /// Shop settings (turning on Stock-take): Onboard always; in Shelf only an
+  /// admin or manager (a cashier's Shelf routes don't reach settings).
+  bool get mayChangeSettings => !isShelf || person?.role == 'admin' || person?.role == 'manager';
+
+  /// The person whose sign-in sends the queue ('' in Onboard).
+  String get who => isShelf ? person?.phone ?? '' : '';
+
   /// Karots Shelf: this phone's own id, and what locks the app now.
   String shelfDevice = '';
   VoidCallback? lockNow;
@@ -128,7 +136,7 @@ class AppState extends ChangeNotifier {
     _live[s.uid] = s;
     _pullers.remove(s.uid)?.stop();
     Future<void> work() async {
-      await flushPending(db, c, s); // Task 8: only this person's
+      await flushPending(db, c, s, who: who.phone);
       await pull(db, c, s);
     }
 

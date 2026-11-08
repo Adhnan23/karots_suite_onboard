@@ -138,14 +138,14 @@ class _PendingScreenState extends State<PendingScreen> {
                   ? null
                   : () async {
                       setState(() => busy = true);
-                      final left = await guard(context, () => flushPending(app.db, client, widget.shop));
+                      final left = await guard(context, () => flushPending(app.db, client, widget.shop, who: app.who));
                       app.pushed(widget.shop);
                       setState(() => busy = false);
                       await load();
                       if (left != null && context.mounted) toast(context, left == 0 ? 'All pushed' : '$left still waiting: see why on each');
                     },
               icon: const Icon(Icons.cloud_upload_rounded),
-              label: Text(client == null ? 'Connect to push' : 'Push ${rows.length} now'),
+              label: Text(client == null ? 'Connect to push' : 'Push ${rows.where((o) => o.who == app.who).length} now'),
             ),
       body: rows.isEmpty
           ? const Empty(icon: Icons.cloud_done_rounded, title: 'Nothing waiting')
@@ -155,6 +155,7 @@ class _PendingScreenState extends State<PendingScreen> {
                 for (final o in rows)
                   Card(
                     child: ListTile(
+                      enabled: o.who == app.who, // another Shelf person's: theirs to send
                       title: Text('${((o.data['product'] as Map?) ?? {})['name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
                         [
@@ -164,6 +165,7 @@ class _PendingScreenState extends State<PendingScreen> {
                             'batches' => 'Refused stock to retry',
                             _ => o.op,
                           },
+                          if (o.who != app.who) 'waiting for ${o.who} to sign in',
                           if (o.error.isNotEmpty) o.error,
                         ].join(' · '),
                         style: TextStyle(color: o.error.isEmpty ? null : c.danger),

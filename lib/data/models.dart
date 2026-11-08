@@ -227,12 +227,15 @@ class ReviewItem {
 
 /// Work waiting for a shop to be reachable.
 class PendingOp {
-  PendingOp({String? uid, required this.shopUid, required this.op, required this.data, this.error = '', DateTime? createdAt})
+  PendingOp({String? uid, required this.shopUid, required this.op, required this.data, this.error = '', this.who = '', DateTime? createdAt})
     : uid = uid ?? newUid(),
       createdAt = createdAt ?? DateTime.now();
   final String uid, shopUid, op; // op: create | update | merge | alt
   Map<String, dynamic> data;
   String error;
+
+  /// Karots Shelf: whose sign-in sends it (their phone number); '' in Onboard.
+  final String who;
   final DateTime createdAt;
   Map<String, Object?> toRow() => {
     'uid': uid,
@@ -240,6 +243,7 @@ class PendingOp {
     'op': op,
     'json': jsonEncode(data),
     'error': error,
+    'who': who,
     'created_at': createdAt.toIso8601String(),
   };
   factory PendingOp.fromRow(Map r) => PendingOp(
@@ -248,6 +252,7 @@ class PendingOp {
     op: r['op'] as String,
     data: (jsonDecode(r['json'] as String) as Map).cast<String, dynamic>(),
     error: r['error'] as String? ?? '',
+    who: r['who'] as String? ?? '',
     createdAt: DateTime.tryParse(r['created_at'] as String? ?? ''),
   );
 }

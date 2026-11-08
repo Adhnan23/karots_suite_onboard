@@ -51,6 +51,10 @@ class _LotsSectionState extends State<LotsSection> {
   /// Old stock needs Stock-take on in the shop: offers to turn it on.
   Future<bool> stockTakeOn(SuiteClient cl) async {
     if (widget.shop.snapshot['stockTake'] != false) return true;
+    if (!AppScope.of(context).mayChangeSettings) {
+      toast(context, 'Ask the owner to turn on Stock-take (Settings)', error: true);
+      return false;
+    }
     final on = await showDialog<bool>(
       context: context,
       builder: (x) => AlertDialog(

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../data/db.dart';
 import '../data/models.dart';
+import '../flavor.dart';
 import '../suite/client.dart';
 import 'match.dart';
 
@@ -225,6 +226,20 @@ Future<int> pushSupplier(Db db, SuiteClient c, Shop s, CatalogSupplier sup) asyn
 /// Keeps the catalogue's copy (joins the product it matches, or adds it), and
 /// the shop's own list, so a pushed product shows there before the next pull.
 Future<void> keepCopy(Db db, Shop s, CatalogProduct p, {int remoteId = 0}) async {
+  if (isShelf) {
+    // Karots Shelf has no catalogue: only the shop's own list.
+    if (remoteId > 0) {
+      await db.putShopProduct(s.uid, {
+        'remote_id': remoteId,
+        'catalog_uid': null,
+        'name': p.name,
+        'barcode': p.barcode,
+        'category': p.category,
+        'json': jsonEncode(p.toJson()),
+      });
+    }
+    return;
+  }
   final hit = await matchProduct(db, codes: p.allCodes, name: p.name);
   final x = hit ?? CatalogProduct.fromJson({...p.toJson(), 'uid': p.uid, 'cost': ''}); // cost is the shop's, never the catalogue's
   if (hit != null) {
@@ -385,12 +400,16 @@ Future<void> disableInShop(Db db, SuiteClient c, Shop s, int remoteId) async {
 }
 
 /// Saves the work for when the shop can be reached.
-Future<void> queue(Db db, Shop s, String op, Draft d) => db.addPending(PendingOp(shopUid: s.uid, op: op, data: d.toJson()));
+/// Keeps work for when the shop is in reach; [who] is the Shelf person whose
+/// sign-in will send it ('' in Onboard).
+Future<void> queue(Db db, Shop s, String op, Draft d, {String who = ''}) =>
+    db.addPending(PendingOp(shopUid: s.uid, op: op, data: d.toJson(), who: who));
 
 /// Sends what waited; returns how many are still waiting (each keeps its error).
-Future<int> flushPending(Db db, SuiteClient c, Shop s) async {
+Future<int> flushPending(Db db, SuiteClient c, Shop s, {String who = ''}) async {
   var left = 0;
   for (final o in await db.pending(s.uid)) {
+    if (o.who != who) continue; // another person's: it goes under their own sign-in
     try {
       if (o.op == 'batches') {
         final p = CatalogProduct.fromJson(o.data['product'] as Map);
@@ -408,7 +427,7 @@ Future<int> flushPending(Db db, SuiteClient c, Shop s) async {
         if (r.failed.isNotEmpty) {
           // The product exists now: only its refused batches wait, never a second create.
           await db.donePending(o.uid);
-          await _keepBatches(db, PendingOp(shopUid: o.shopUid, op: 'batches', data: {}), r);
+          await _keepBatches(db, PendingOp(shopUid: o.shopUid, op: 'batches', data: {}, who: o.who), r);
           left++;
           continue;
         }
