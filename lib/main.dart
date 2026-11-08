@@ -50,8 +50,14 @@ class _OnboardAppState extends State<OnboardApp> {
 
 /// The app's frame. The shared state sits above the navigator, so every page
 /// opened on top reaches it too (not only the first screen).
-Widget buildApp({required AppState? app, required Widget home, ThemeMode mode = ThemeMode.system, bool fonts = true}) => MaterialApp(
-  title: 'Karots Suite Onboard',
+Widget buildApp({
+  required AppState? app,
+  required Widget home,
+  ThemeMode mode = ThemeMode.system,
+  bool fonts = true,
+  String title = 'Karots Suite Onboard',
+}) => MaterialApp(
+  title: title,
   debugShowCheckedModeBanner: false,
   theme: ksTheme(Brightness.light, fonts: fonts),
   darkTheme: ksTheme(Brightness.dark, fonts: fonts),

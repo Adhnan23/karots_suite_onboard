@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../flavor.dart';
+
 import 'alternatives_screen.dart';
 import 'export_screen.dart';
 import 'quick_add_screen.dart';
@@ -26,7 +28,8 @@ void registerShopActions() {
       open: (c, s) => _go(c, ShopSuppliersScreen(shop: s)),
     ),
     (icon: Icons.cloud_upload_outlined, label: 'Waiting to push', needsConnection: false, open: (c, s) => _go(c, PendingScreen(shop: s))),
-    (icon: Icons.swap_horiz_rounded, label: 'Alternatives', needsConnection: false, open: (c, s) => _go(c, AlternativesScreen(shop: s))),
+    if (!isShelf)
+      (icon: Icons.swap_horiz_rounded, label: 'Alternatives', needsConnection: false, open: (c, s) => _go(c, AlternativesScreen(shop: s))),
     (icon: Icons.table_view_rounded, label: 'Export sheets (CSV)', needsConnection: false, open: (c, s) => _go(c, ExportScreen(shop: s))),
   ]);
 }

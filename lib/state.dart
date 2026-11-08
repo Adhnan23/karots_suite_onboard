@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'data/db.dart';
 import 'data/models.dart';
 import 'settings/secrets.dart';
+import 'shelf/account.dart';
 import 'settings/secure.dart';
 import 'suite/client.dart';
 import 'sync/auto_pull.dart';
@@ -101,6 +102,45 @@ class AppState extends ChangeNotifier {
         AutoPuller(() async {
             await flushPending(db, c, s);
             await pull(db, c, s);
+          })
+          ..addListener(notifyListeners)
+          ..start();
+    notifyListeners();
+    return c;
+  }
+
+  /// Karots Shelf: the person signed in on this phone, and their PIN while the
+  /// app is unlocked (memory only), to sign in again when the shop's session ends.
+  ShelfAccount? person;
+  String? personPin;
+
+  /// Karots Shelf: this phone's own id, and what locks the app now.
+  String shelfDevice = '';
+  VoidCallback? lockNow;
+
+  /// Karots Shelf: connects to the one shop as the person. Their queue goes up
+  /// first, then the pull; a session that ran out signs in again once.
+  Future<SuiteClient> connectPerson(Shop s) async {
+    final who = person!, pin = personPin!;
+    final c = SuiteClient(s.address, app: 'shelf', device: shelfDevice);
+    await c.signInPerson(who.phone, pin);
+    _sessions[s.uid] = c;
+    _live[s.uid] = s;
+    _pullers.remove(s.uid)?.stop();
+    Future<void> work() async {
+      await flushPending(db, c, s); // Task 8: only this person's
+      await pull(db, c, s);
+    }
+
+    _pullers[s.uid] =
+        AutoPuller(() async {
+            try {
+              await work();
+            } on SuiteError catch (e) {
+              if (e.status != 401 || personPin == null) rethrow;
+              await c.signInPerson(who.phone, personPin!);
+              await work();
+            }
           })
           ..addListener(notifyListeners)
           ..start();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/models.dart';
+import '../flavor.dart';
 import '../state.dart';
 import '../sync/pull.dart';
 import '../theme/tokens.dart';
@@ -33,7 +34,12 @@ class _ShopScreenState extends State<ShopScreen> {
     setState(() => step = '');
     app.changed();
     if (r != null && mounted) {
-      toast(context, '${r.known + r.toReview} products: ${r.toReview} new for Review · ${r.suppliersToReview} new suppliers');
+      toast(
+        context,
+        isShelf
+            ? 'Up to date: ${r.known + r.toReview} products'
+            : '${r.known + r.toReview} products: ${r.toReview} new for Review · ${r.suppliersToReview} new suppliers',
+      );
     }
   }
 
@@ -47,32 +53,43 @@ class _ShopScreenState extends State<ShopScreen> {
       appBar: AppBar(
         title: Text(s.name),
         actions: [
-          IconButton(
-            tooltip: 'Edit',
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () async => (await editShop(context, s)) != null ? setState(() {}) : null,
-          ),
-          IconButton(
-            tooltip: 'Delete',
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () async {
-              final yes = await showDialog<bool>(
-                context: context,
-                builder: (d) => AlertDialog(
-                  title: Text('Delete ${s.name}?'),
-                  content: const Text('Only this profile goes. The catalogue keeps everything it took from the shop.'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
-                    FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('Delete')),
-                  ],
+          if (isShelf) ...[
+            if (app.person case final p?)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text(p.name, style: TextStyle(color: c.mutedForeground)),
                 ),
-              );
-              if (yes == true) {
-                await app.db.deleteShop(s.uid);
-                if (context.mounted) Navigator.pop(context);
-              }
-            },
-          ),
+              ),
+            IconButton(tooltip: 'Lock', icon: const Icon(Icons.lock_outline_rounded), onPressed: app.lockNow),
+          ] else ...[
+            IconButton(
+              tooltip: 'Edit',
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () async => (await editShop(context, s)) != null ? setState(() {}) : null,
+            ),
+            IconButton(
+              tooltip: 'Delete',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () async {
+                final yes = await showDialog<bool>(
+                  context: context,
+                  builder: (d) => AlertDialog(
+                    title: Text('Delete ${s.name}?'),
+                    content: const Text('Only this profile goes. The catalogue keeps everything it took from the shop.'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+                      FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('Delete')),
+                    ],
+                  ),
+                );
+                if (yes == true) {
+                  await app.db.deleteShop(s.uid);
+                  if (context.mounted) Navigator.pop(context);
+                }
+              },
+            ),
+          ],
         ],
       ),
       body: Narrow(
@@ -93,7 +110,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 Text(
                   [
                     if (s.kind.isNotEmpty) s.kind,
-                    if (s.installId.isNotEmpty) 'install ${s.installId}',
+                    if (s.installId.isNotEmpty && !isShelf) 'install ${s.installId}',
                     s.lastPull == null ? 'never pulled' : 'pulled ${DateFormat('d MMM, HH:mm').format(s.lastPull!)}',
                   ].join(' · '),
                   style: TextStyle(color: c.faint, fontSize: 13),
@@ -141,7 +158,11 @@ class _ShopScreenState extends State<ShopScreen> {
                             )
                           : FilledButton.icon(
                               onPressed: () async {
-                                if (await connectShop(context, s)) setState(() {});
+                                if (isShelf) {
+                                  await guard(context, () => app.connectPerson(s));
+                                } else if (await connectShop(context, s)) {
+                                  setState(() {});
+                                }
                               },
                               icon: const Icon(Icons.link_rounded),
                               label: const Text('Connect'),
