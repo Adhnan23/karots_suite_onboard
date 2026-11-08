@@ -6,6 +6,7 @@ import '../sync/match.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
 import '../sync/variant.dart';
+import 'identify_sheet.dart';
 import 'product_form.dart';
 
 /// Search by name or any barcode; kind: only products seen in that kind of shop.
@@ -155,7 +156,24 @@ class CatalogProductPage extends StatelessWidget {
       body: Narrow(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-          children: [ProductForm(key: form, product: product)],
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: identifyButton(context, Shop(name: 'the catalogue'), form),
+            ),
+            const SizedBox(height: 8),
+            FutureBuilder(
+              future: Future.wait([db.knownUnits(), db.suppliers()]),
+              builder: (context, snap) => snap.data == null
+                  ? const LinearProgressIndicator()
+                  : ProductForm(
+                      key: form,
+                      product: product,
+                      units: snap.data![0] as List<String>,
+                      suppliers: [for (final x in snap.data![1] as List<CatalogSupplier>) (uid: x.uid, name: x.name)],
+                    ),
+            ),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -167,6 +185,9 @@ class CatalogProductPage extends StatelessWidget {
             if (other != null && other.uid != p.uid && context.mounted) {
               return toast(context, '$code is already on “${other.name}”: if they are the same product, merge them in Duplicates', error: true);
             }
+          }
+          if (p.supplier.isNotEmpty && !(await db.suppliers()).any((x) => x.name.toLowerCase() == p.supplier.toLowerCase())) {
+            await db.saveSupplier(CatalogSupplier(name: p.supplier, kinds: {...p.kinds}));
           }
           await db.saveProduct(p);
           if (context.mounted) Navigator.pop(context);

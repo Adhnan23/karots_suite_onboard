@@ -149,6 +149,22 @@ class Db {
     return r.isEmpty ? null : product(r.first['product_uid'] as String);
   }
 
+  /// Every unit the catalogue and its shops use (pcs, kg, m, box…), for pickers.
+  Future<List<String>> knownUnits() async {
+    final out = <String>{'pcs'};
+    for (final r in await raw.rawQuery('SELECT DISTINCT unit FROM catalog_products')) {
+      final u = '${r['unit'] ?? ''}'.trim();
+      if (u.isNotEmpty) out.add(u);
+    }
+    for (final s in await shops()) {
+      for (final u in (s.snapshot['units'] as List? ?? [])) {
+        final a = '${(u as Map)['abbreviation'] ?? ''}'.trim();
+        if (a.isNotEmpty) out.add(a);
+      }
+    }
+    return out.toList()..sort();
+  }
+
   // ---- suppliers ----
 
   Future<void> saveSupplier(CatalogSupplier s) => _w(raw.insert('catalog_suppliers', s.toRow(), conflictAlgorithm: ConflictAlgorithm.replace));

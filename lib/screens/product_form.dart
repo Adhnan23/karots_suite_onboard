@@ -5,6 +5,7 @@ import '../input/barcodes_editor.dart';
 import '../input/category_field.dart';
 import '../input/field_kind.dart';
 import '../input/ks_field.dart';
+import '../input/supplier_field.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
 import 'packs_editor.dart';
@@ -12,7 +13,7 @@ import 'packs_editor.dart';
 /// The product's own details, shared by the catalogue and a shop's editor. Every
 /// field reads from a photo too. fieldLabels: the custom fields to show.
 class ProductForm extends StatefulWidget {
-  const ProductForm({super.key, required this.product, this.fieldLabels = const [], this.categories, this.units = const []});
+  const ProductForm({super.key, required this.product, this.fieldLabels = const [], this.categories, this.units = const [], this.suppliers});
   final CatalogProduct product;
   final List<String> fieldLabels;
 
@@ -20,6 +21,10 @@ class ProductForm extends StatefulWidget {
   /// only, and each shop has its own tree.
   final List<String>? categories;
   final List<String> units;
+
+  /// The catalogue's suppliers, to pick the product's usual one (catalogue only;
+  /// a shop's editor has its own).
+  final List<CatSupplier>? suppliers;
   @override
   State<ProductForm> createState() => ProductFormState();
 }
@@ -40,6 +45,18 @@ class ProductFormState extends State<ProductForm> {
     for (final l in {...widget.fieldLabels, ...p.fields.keys}) l: TextEditingController(text: p.fields[l] ?? ''),
   };
   final packs = GlobalKey<PacksEditorState>();
+  late String supplierChoice = () {
+    final name = p.supplier.trim();
+    if (name.isEmpty) return 'none';
+    final hit = (widget.suppliers ?? []).where((x) => x.name.toLowerCase() == name.toLowerCase()).firstOrNull;
+    return hit == null ? 'new:$name' : 'cat:${hit.uid}';
+  }();
+
+  String get _supplierName => supplierChoice.startsWith('new:')
+      ? supplierChoice.substring(4)
+      : supplierChoice.startsWith('cat:')
+      ? (widget.suppliers ?? []).where((x) => 'cat:${x.uid}' == supplierChoice).firstOrNull?.name ?? p.supplier
+      : '';
 
   /// The AI answer picked, for the shop to learn on save (AI Assistant's extra).
   Map<String, dynamic>? aiPick;
@@ -68,6 +85,7 @@ class ProductFormState extends State<ProductForm> {
     'selling': selling.text.trim(),
     'wholesale': wholesale.text.trim(),
     'warranty_months': int.tryParse(warranty.text.trim()) ?? 0,
+    'supplier': widget.suppliers == null ? p.supplier : _supplierName,
     'barcodes': [
       for (final b in extra.currentState?.codes ?? p.barcodes)
         if (b != barcode.text.trim()) b,
@@ -123,6 +141,10 @@ class ProductFormState extends State<ProductForm> {
           const SizedBox(height: 10),
           if (widget.categories != null) ...[CategoryField(controller: category, paths: widget.categories!), const SizedBox(height: 10)],
           _pick('Unit', unit, widget.units),
+          if (widget.suppliers != null) ...[
+            const SizedBox(height: 10),
+            SupplierField(value: supplierChoice, shop: const [], catalogue: widget.suppliers!, onChanged: (v) => setState(() => supplierChoice = v)),
+          ],
         ],
       ),
       const SizedBox(height: 12),
