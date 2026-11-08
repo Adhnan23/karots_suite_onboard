@@ -24,13 +24,26 @@ class Me {
   final bool stockTakeEnabled;
 }
 
-/// One shop's /api/v1, signed in as its system user. JSON in and out as maps;
-/// money stays a decimal string.
+/// Who signed in to Karots Shelf (from the login answer).
+class ShelfUser {
+  ShelfUser(this.name, this.role);
+  final String name, role;
+}
+
+/// One shop's /api/v1, signed in as its system user (Onboard) or as the person
+/// (Karots Shelf: app 'shelf'). JSON in and out as maps; money stays a decimal string.
 class SuiteClient {
-  SuiteClient(String base, {http.Client? client})
+  SuiteClient(String base, {http.Client? client, this.app = '', this.device = ''})
     : base = base.endsWith('/') ? base.substring(0, base.length - 1) : base,
       _http = client ?? http.Client();
   final String base;
+
+  /// '' for Onboard, 'shelf' for Karots Shelf (the Suite then treats the
+  /// sign-in as the person's, never as their till's device).
+  final String app;
+
+  /// This phone's own id (Shelf), so the shop tells phones apart.
+  final String device;
   final http.Client _http;
   String _cookie = '';
   static const systemPhone = '0000000001';
@@ -38,7 +51,8 @@ class SuiteClient {
   static const timeout = Duration(seconds: 60);
 
   Map<String, String> get _headers => {
-    'X-Ks-Device': 'karots-suite-onboard',
+    'X-Ks-Device': app == 'shelf' ? 'karots-shelf-$device' : 'karots-suite-onboard',
+    if (app.isNotEmpty) 'X-Ks-App': app,
     'Accept': 'application/json',
     if (_cookie.isNotEmpty) 'Cookie': _cookie,
   };
@@ -63,7 +77,7 @@ class SuiteClient {
         code = '${e['code']}';
         msg = '${e['message']}';
       } catch (_) {}
-      throw SuiteError(res.statusCode, code, msg);
+      throw SuiteError(res.statusCode, code, _friendly[code] ?? msg);
     }
     return res;
   }
@@ -100,6 +114,23 @@ class SuiteClient {
       }
     }
     throw last ?? SuiteError(401, 'UNAUTHORIZED', 'Sign-in refused');
+  }
+
+  /// Karots Shelf: signs in with the person's own phone number and PIN.
+  Future<ShelfUser> signInPerson(String phone, String pin) async {
+    final SuiteError err;
+    try {
+      final m = await post('/auth/login', {'phone': phone, 'pin': pin, 'app': app, 'deviceLabel': 'Karots Shelf'}) as Map;
+      final u = m['user'] as Map;
+      if ((await get('/me') as Map)['mustChangePin'] == true) {
+        throw SuiteError(403, 'PIN_CHANGE_REQUIRED', _friendly['PIN_CHANGE_REQUIRED']!);
+      }
+      return ShelfUser('${u['name']}', '${u['role']}');
+    } on SuiteError catch (e) {
+      if (e.status != 401 && e.status != 422) rethrow;
+      err = SuiteError(e.status, e.code, 'Wrong phone number or PIN');
+    }
+    throw err;
   }
 
   Future<Me> me() async {
@@ -201,3 +232,9 @@ class SuiteClient {
     return gid;
   }
 }
+
+/// What a person is told for the refusals they can do something about.
+const _friendly = {
+  'SHELF_NO_ACCESS': 'Ask the owner to give you Karots Shelf (Users page)',
+  'PIN_CHANGE_REQUIRED': "Change your PIN on the shop's PC first",
+};
