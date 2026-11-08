@@ -11,6 +11,7 @@ import '../data/backup.dart';
 import '../state.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
+import 'sync_screen.dart';
 
 /// Export the app's data to a file, or merge one in (another device's, or a backup).
 Future<void> showBackup(BuildContext context) => showModalBottomSheet(
@@ -25,7 +26,7 @@ Future<void> showBackup(BuildContext context) => showModalBottomSheet(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Backup', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          const Text('Backup and sync', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
           Text(
             'The catalogue, suppliers and shop profiles in one file: keep it safe, or import it on your other device. '
@@ -33,6 +34,24 @@ Future<void> showBackup(BuildContext context) => showModalBottomSheet(
             style: TextStyle(color: c.mutedForeground),
           ),
           const SizedBox(height: 16),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.wifi_tethering_rounded),
+            label: const Text('Let another device sync'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SyncHostScreen()));
+            },
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.sync_rounded),
+            label: const Text('Sync with a device'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              syncWithDevice(context);
+            },
+          ),
+          const SizedBox(height: 18),
           FilledButton.icon(
             icon: const Icon(Icons.upload_file_rounded),
             label: const Text('Export backup'),
