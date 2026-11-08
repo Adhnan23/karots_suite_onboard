@@ -4,10 +4,14 @@ import 'app.dart';
 import 'data/db.dart';
 import 'state.dart';
 import 'lock/lock_screen.dart';
+import 'screens/shop_actions.dart';
 import 'settings/secure.dart';
 import 'theme/app_theme.dart';
 
-void main() => runApp(const OnboardApp());
+void main() {
+  registerShopActions();
+  runApp(const OnboardApp());
+}
 
 class OnboardApp extends StatefulWidget {
   const OnboardApp({super.key});
