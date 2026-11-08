@@ -165,6 +165,38 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
         ),
         actions: [
           if (isNew) TextButton.icon(onPressed: pickFromCatalogue, icon: const Icon(Icons.inventory_2_outlined), label: const Text('From catalogue')),
+          if (!isNew)
+            IconButton(
+              tooltip: 'Disable in this shop',
+              icon: const Icon(Icons.block_rounded),
+              onPressed: () async {
+                final app = AppScope.of(context);
+                final c = app.session(s);
+                if (c == null) return toast(context, 'Connect to ${s.name} first', error: true);
+                final yes = await showDialog<bool>(
+                  context: context,
+                  builder: (x) => AlertDialog(
+                    title: Text('Disable ${d.product.name} in ${s.name}?'),
+                    content: const Text(
+                      'It stops showing at the till. The shop keeps its sales and stock history, and can enable it again on its Products page.',
+                    ),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(x, false), child: const Text('Cancel')),
+                      FilledButton(onPressed: () => Navigator.pop(x, true), child: const Text('Disable')),
+                    ],
+                  ),
+                );
+                if (yes != true || !context.mounted) return;
+                final ok = await guard(context, () async {
+                  await disableInShop(app.db, c, s, d.remoteId);
+                  return true;
+                });
+                if (ok == true && context.mounted) {
+                  app.pushed(s);
+                  Navigator.pop(context, true);
+                }
+              },
+            ),
           IconButton(
             tooltip: 'Make a copy (another flavour or size)',
             icon: const Icon(Icons.copy_all_rounded),

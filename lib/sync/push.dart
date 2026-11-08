@@ -363,6 +363,13 @@ Future<void> queueBatch(Db db, Shop s, int productId, CatalogProduct p, StockBat
   ),
 );
 
+/// Disables a product in the shop (the Suite keeps its sales and stock history;
+/// it can be enabled again there) and drops it from the shop's list here.
+Future<void> disableInShop(Db db, SuiteClient c, Shop s, int remoteId) async {
+  await c.delete('/admin/products/$remoteId');
+  await db.raw.delete('shop_products', where: 'shop_uid = ? AND remote_id = ?', whereArgs: [s.uid, remoteId]);
+}
+
 /// Saves the work for when the shop can be reached.
 Future<void> queue(Db db, Shop s, String op, Draft d) => db.addPending(PendingOp(shopUid: s.uid, op: op, data: d.toJson()));
 

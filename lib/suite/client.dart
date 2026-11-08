@@ -76,6 +76,7 @@ class SuiteClient {
   Future<dynamic> get(String path, [Map<String, String>? query]) => _json('GET', path, query: query);
   Future<dynamic> post(String path, [Object? body]) => _json('POST', path, body: body ?? {});
   Future<dynamic> put(String path, [Object? body]) => _json('PUT', path, body: body ?? {});
+  Future<dynamic> delete(String path) => _json('DELETE', path);
 
   // ---- who and sign-in ----
 

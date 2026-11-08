@@ -5,6 +5,7 @@ import '../state.dart';
 import '../sync/review.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
+import 'review_edit_page.dart';
 
 /// What pulls found that the catalogue hasn't got: accept, fix or drop.
 class ReviewScreen extends StatefulWidget {
@@ -56,6 +57,11 @@ class _ReviewScreenState extends State<ReviewScreen> {
   }
 
   Future<void> editOne(ReviewItem r) async {
+    if (r.kind == 'product') {
+      final ok = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => ReviewEditPage(item: r)));
+      if (ok == true) await load();
+      return;
+    }
     final db = AppScope.of(context).db;
     final name = TextEditingController(text: '${r.data['name'] ?? ''}');
     final sell = TextEditingController(text: '${r.data['selling'] ?? ''}');

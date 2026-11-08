@@ -315,4 +315,15 @@ void main() {
     expect(sent('/api/v1/admin/products/70/packs').map((x) => x['name']), ['Box']);
     expect(sent('/api/v1/admin/products/70/barcodes').map((x) => x['barcode']), ['556']);
   });
+
+  test('disabling a product in the shop: the shop keeps its history, it leaves the shop\'s list here', () async {
+    shop.routes['DELETE /api/v1/admin/products/70'] = (r, _) {
+      r.response.statusCode = 204;
+      return '';
+    };
+    await db.putShopProduct(s.uid, {'remote_id': 70, 'name': 'Amoxil', 'json': '{}'});
+    await disableInShop(db, SuiteClient(shop.url), s, 70);
+    expect(shop.calls.where((c) => c.$1 == 'DELETE' && c.$2 == '/api/v1/admin/products/70').length, 1);
+    expect(await db.shopProducts(s.uid), isEmpty);
+  });
 }
