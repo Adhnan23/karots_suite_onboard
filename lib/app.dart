@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'screens/review_screen.dart';
 import 'screens/shops_screen.dart';
 
 /// The app after unlock: Shops, Catalogue, Review, Duplicates. Phone = bottom bar,
@@ -21,6 +22,7 @@ class _AppHomeState extends State<AppHome> {
 
   Widget page(int i) => switch (i) {
     0 => const ShopsScreen(),
+    2 => const ReviewScreen(),
     _ => Center(child: Text(dests[i].$3)),
   };
 
