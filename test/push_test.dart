@@ -239,4 +239,13 @@ void main() {
     expect(r.productId, 70);
     expect(r.notes, ['Pack Card: that barcode is already used']);
   });
+
+  test('a batch added offline waits, then goes in as a restock only', () async {
+    await queueBatch(db, s, 70, CatalogProduct(name: 'Amoxil', cost: '20', selling: '25'), StockBatch(qty: '15', expiry: '2028-01-31'));
+    expect((await db.pending(s.uid)).single.op, 'batches');
+    expect(await flushPending(db, SuiteClient(shop.url), s), 0);
+    final r = sent('/api/v1/admin/inventory/intake/restock').single;
+    expect((r['productId'], r['quantity'], r['expiry'], r['costPrice']), (70, '15', '2028-01-31', '20'));
+    expect(sent('/api/v1/admin/inventory/intake/create'), isEmpty);
+  });
 }

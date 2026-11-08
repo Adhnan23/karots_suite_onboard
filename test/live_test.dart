@@ -7,6 +7,7 @@ import 'package:karots_suite_onboard/ai/identify.dart';
 import 'package:karots_suite_onboard/data/db.dart';
 import 'package:karots_suite_onboard/data/models.dart';
 import 'package:karots_suite_onboard/suite/client.dart';
+import 'package:karots_suite_onboard/sync/lots.dart';
 import 'package:karots_suite_onboard/sync/pull.dart';
 import 'package:karots_suite_onboard/sync/push.dart';
 import 'package:karots_suite_onboard/sync/review.dart';
@@ -78,7 +79,17 @@ void main() {
       final form = await c.get('/x/productplus/form', {'productId': '${r.productId}', 'categoryId': '${p['categoryId']}', 'where': 'form'}) as List;
       expect(form.firstWhere((x) => x['key'] == f['key'])['value'], 'Testamol');
 
-      // Change it.
+      // Its batches: read, then fix one's count, expiry and price.
+    var st = await productStock(c, r.productId);
+    expect(st.lots.length, 2);
+    final second = st.lots.firstWhere((l) => l.expiry == '2028-06-30');
+    await editLot(c, r.productId, st, second, count: '7', expiry: '2028-09-30', price: '57');
+    st = await productStock(c, r.productId);
+    final fixed = st.lots.firstWhere((l) => l.id == second.id);
+    expect((fixed.qty, fixed.expiry, fixed.price), ('7', '2028-09-30', '57.00'));
+    expect(st.total, '13');
+
+    // Change it.
       await pushUpdate(
         db,
         c,

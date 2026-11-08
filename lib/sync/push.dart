@@ -315,6 +315,22 @@ Future<void> pushUpdate(Db db, SuiteClient c, Shop s, Draft d) async {
   await keepCopy(db, s, d.product, remoteId: d.remoteId);
 }
 
+/// A batch of old stock for a product the shop has, kept to push later.
+Future<void> queueBatch(Db db, Shop s, int productId, CatalogProduct p, StockBatch b) => db.addPending(
+  PendingOp(
+    shopUid: s.uid,
+    op: 'batches',
+    data: {
+      'productId': productId,
+      'supplierId': 0,
+      'product': p.toJson(),
+      'batches': [
+        {'index': 0, 'batch': b.toJson()},
+      ],
+    },
+  ),
+);
+
 /// Saves the work for when the shop can be reached.
 Future<void> queue(Db db, Shop s, String op, Draft d) => db.addPending(PendingOp(shopUid: s.uid, op: op, data: d.toJson()));
 

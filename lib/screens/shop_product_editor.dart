@@ -7,6 +7,7 @@ import '../sync/match.dart';
 import '../sync/push.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
+import 'lots_section.dart';
 import 'product_form.dart';
 import 'stock_editor.dart';
 
@@ -189,6 +190,13 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
                 ),
               ],
             ),
+            if (!isNew) ...[
+              const SizedBox(height: 12),
+              Section(
+                title: 'Stock',
+                children: [LotsSection(shop: s, productId: d.remoteId, product: d.product)],
+              ),
+            ],
             if (isNew) ...[
               const SizedBox(height: 12),
               Section(
