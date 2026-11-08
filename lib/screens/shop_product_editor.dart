@@ -61,7 +61,9 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
     );
     if (p != null) {
       setState(() {
-        d = Draft(product: CatalogProduct.fromJson({...p.toJson()}), mode: d.mode, batches: d.batches);
+        d = fromCatalogue(p)
+          ..mode = d.mode
+          ..batches = d.batches;
         form = GlobalKey<ProductFormState>();
       });
     }

@@ -43,7 +43,7 @@ class _ExportScreenState extends State<ExportScreen> {
     ];
     final k = [
       for (final p in await db.products())
-        if (s.kind.isEmpty || p.kinds.contains(s.kind)) Draft(product: p),
+        if (s.kind.isEmpty || p.kinds.contains(s.kind)) fromCatalogue(p),
     ];
     final sup = [
       for (final x in await db.suppliers())

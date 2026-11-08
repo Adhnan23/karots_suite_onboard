@@ -199,4 +199,13 @@ void main() {
     expect(put['reorderLevel'], 25);
     expect(put['supplierId'], 3);
   });
+
+  test('a catalogue product goes to a shop without a category: the shop files it', () {
+    final p = CatalogProduct(name: 'Panadol', category: 'Medicine > Pain', selling: '12', fields: {'Generic name': 'Paracetamol'});
+    final d = fromCatalogue(p);
+    expect(d.product.category, '');
+    expect(d.product.name, 'Panadol');
+    expect(d.product.fields, {'Generic name': 'Paracetamol'});
+    expect(p.category, 'Medicine > Pain', reason: 'the catalogue keeps its own');
+  });
 }

@@ -113,7 +113,15 @@ class ProductFormState extends State<ProductForm> {
             KsField(label: 'Other barcodes', controller: extra, kind: FieldKind.barcode),
           ),
           const SizedBox(height: 10),
-          _pair(_pick('Category', category, widget.categories, helper: 'A > B'), _pick('Unit', unit, widget.units)),
+          _pair(
+            _pick(
+              'Category',
+              category,
+              widget.categories,
+              helper: widget.categories.isEmpty ? 'A > B' : 'Blank: Uncategorized, for the shop to file',
+            ),
+            _pick('Unit', unit, widget.units),
+          ),
         ],
       ),
       const SizedBox(height: 12),

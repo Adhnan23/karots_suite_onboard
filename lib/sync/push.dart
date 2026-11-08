@@ -74,6 +74,11 @@ class Draft {
   );
 }
 
+/// A catalogue product on its way to a shop: everything but the category, which
+/// is the shop's own to choose (Identify in the editor, or its AI Assistant files
+/// what lands in Uncategorized).
+Draft fromCatalogue(CatalogProduct p) => Draft(product: CatalogProduct.fromJson({...p.toJson(), 'category': ''}));
+
 class FailedBatch {
   FailedBatch(this.index, this.batch, this.message);
   final int index;
