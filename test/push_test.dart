@@ -116,7 +116,7 @@ void main() {
       {'name': 'Card', 'size': '10', 'sellingPrice': '240', 'wholesalePrice': '', 'barcode': 'C1'},
     ], reason: 'intake makes the product only: its packs go on after');
     expect(sent('/api/v1/admin/products/70/barcodes'), [
-      {'barcode': '556', 'source': ''},
+      {'barcode': '556', 'source': 'form'},
     ]);
     final rs = sent('/api/v1/admin/inventory/intake/restock');
     expect(

@@ -274,7 +274,7 @@ Future<PushResult> pushCreate(Db db, SuiteClient c, Shop s, Draft d) async {
   }
   for (final code in d.product.barcodes) {
     try {
-      await c.post('/admin/products/$id/barcodes', {'barcode': code, 'source': ''});
+      await c.post('/admin/products/$id/barcodes', {'barcode': code, 'source': 'form'});
     } on SuiteError catch (e) {
       notes.add('Barcode $code: ${e.message}');
     }
@@ -342,7 +342,7 @@ Future<void> pushUpdate(Db db, SuiteClient c, Shop s, Draft d) async {
   }
   final codes = {for (final b in await c.get('/admin/products/${d.remoteId}/barcodes') as List) '${(b as Map)['barcode']}'};
   for (final code in d.product.barcodes) {
-    if (!codes.contains(code)) await c.post('/admin/products/${d.remoteId}/barcodes', {'barcode': code, 'source': ''});
+    if (!codes.contains(code)) await c.post('/admin/products/${d.remoteId}/barcodes', {'barcode': code, 'source': 'form'});
   }
   await keepCopy(db, s, d.product, remoteId: d.remoteId);
 }
