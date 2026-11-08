@@ -31,6 +31,7 @@ class AppState extends ChangeNotifier {
   Future<void> setTeam(String? key) async {
     await team?.stop();
     team = null;
+    db.onWrite = null;
     if (key == null || key.trim().isEmpty) {
       await store.write(teamKeyName, '');
     } else {

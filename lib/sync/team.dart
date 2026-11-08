@@ -95,7 +95,10 @@ class TeamSync extends ChangeNotifier {
     _timers.add(Timer.periodic(every, (_) => syncNow()));
   }
 
+  bool _stopped = false;
+
   Future<void> stop() async {
+    _stopped = true;
     for (final t in _timers) {
       t.cancel();
     }
@@ -120,6 +123,7 @@ class TeamSync extends ChangeNotifier {
 
   /// A change here: sync in a few seconds (several changes, one sync).
   void soon() {
+    if (_stopped) return;
     _soon?.cancel();
     _soon = Timer(const Duration(seconds: 10), syncNow);
   }
@@ -127,7 +131,7 @@ class TeamSync extends ChangeNotifier {
   Future<void>? _running;
 
   /// Syncs with every team device now; while one runs, waits for it instead.
-  Future<void> syncNow() => _running ??= _sync().whenComplete(() => _running = null);
+  Future<void> syncNow() => _stopped ? Future.value() : _running ??= _sync().whenComplete(() => _running = null);
 
   Future<void> _sync() async {
     syncing = true;

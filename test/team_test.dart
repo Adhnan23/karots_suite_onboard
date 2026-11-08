@@ -50,4 +50,20 @@ void main() {
       await t.stop();
     }
   });
+
+  test('after leaving, a change here starts no sync', () async {
+    final pc = await fresh(), phone = await fresh();
+    final a = TeamSync(pc, key: 'KT-AAAA-BBBB-CCCC', device: 'pc', port: 0, discover: false);
+    final b = TeamSync(phone, key: 'KT-AAAA-BBBB-CCCC', device: 'phone', port: 0, discover: false);
+    await a.start();
+    await b.start();
+    b.addPeer('pc', '127.0.0.1', a.port);
+    await b.syncNow();
+    await b.stop();
+    await phone.saveProduct(CatalogProduct(name: 'After leaving'));
+    b.soon();
+    await b.syncNow();
+    expect(await pc.products(), isEmpty);
+    await a.stop();
+  });
 }

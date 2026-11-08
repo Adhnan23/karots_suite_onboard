@@ -147,6 +147,13 @@ class CatalogProductPage extends StatelessWidget {
               tooltip: 'Delete from the catalogue',
               icon: const Icon(Icons.delete_outline),
               onPressed: () async {
+                if (!await confirm(
+                  context,
+                  'Delete ${product.name}?',
+                  'It leaves the catalogue, on your team\'s devices too. Shops keep their own copy.',
+                )) {
+                  return;
+                }
                 await db.deleteProduct(product.uid);
                 if (context.mounted) Navigator.pop(context);
               },

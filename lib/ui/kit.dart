@@ -172,3 +172,18 @@ class Narrow extends StatelessWidget {
 }
 
 ModeController? _mode(BuildContext context) => context.dependOnInheritedWidgetOfExactType<AppScope>()?.notifier?.mode;
+
+/// A yes/no before something that can't be taken back.
+Future<bool> confirm(BuildContext context, String title, String body, {String yes = 'Delete'}) async =>
+    await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(d, true), child: Text(yes)),
+        ],
+      ),
+    ) ==
+    true;

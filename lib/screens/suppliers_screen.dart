@@ -149,7 +149,15 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                             tooltip: 'Remove from the catalogue',
                             icon: const Icon(Icons.delete_outline),
                             onPressed: () async {
-                              await AppScope.of(context).db.deleteSupplier(x.uid);
+                              final db = AppScope.of(context).db;
+                              if (!await confirm(
+                                context,
+                                'Remove ${x.name}?',
+                                'They leave the catalogue\'s suppliers, on your team\'s devices too. Shops keep their own.',
+                              )) {
+                                return;
+                              }
+                              await db.deleteSupplier(x.uid);
                               load();
                             },
                           ),
