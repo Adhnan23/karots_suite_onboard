@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/models.dart';
+import '../input/category_field.dart';
 import '../input/field_kind.dart';
 import '../input/ks_field.dart';
 import '../ui/kit.dart';
@@ -9,10 +10,14 @@ import 'packs_editor.dart';
 /// The product's own details, shared by the catalogue and a shop's editor. Every
 /// field reads from a photo too. fieldLabels: the custom fields to show.
 class ProductForm extends StatefulWidget {
-  const ProductForm({super.key, required this.product, this.fieldLabels = const [], this.categories = const [], this.units = const []});
+  const ProductForm({super.key, required this.product, this.fieldLabels = const [], this.categories, this.units = const []});
   final CatalogProduct product;
   final List<String> fieldLabels;
-  final List<String> categories, units;
+
+  /// The shop's category tree (paths). Null in the catalogue: it keeps products
+  /// only, and each shop has its own tree.
+  final List<String>? categories;
+  final List<String> units;
   @override
   State<ProductForm> createState() => ProductFormState();
 }
@@ -113,15 +118,8 @@ class ProductFormState extends State<ProductForm> {
             KsField(label: 'Other barcodes', controller: extra, kind: FieldKind.barcode),
           ),
           const SizedBox(height: 10),
-          _pair(
-            _pick(
-              'Category',
-              category,
-              widget.categories,
-              helper: widget.categories.isEmpty ? 'A > B' : 'Blank: Uncategorized, for the shop to file',
-            ),
-            _pick('Unit', unit, widget.units),
-          ),
+          if (widget.categories != null) ...[CategoryField(controller: category, paths: widget.categories!), const SizedBox(height: 10)],
+          _pick('Unit', unit, widget.units),
         ],
       ),
       const SizedBox(height: 12),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/models.dart';
+import '../input/supplier_field.dart';
 import '../state.dart';
 import '../sync/match.dart';
 import '../sync/push.dart';
@@ -33,7 +34,6 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
   final stock = GlobalKey<StockEditorState>();
   late Draft d = widget.draft;
   late String supplierChoice = d.supplierId > 0 ? 'shop:${d.supplierId}' : 'none';
-  final newSupplier = TextEditingController();
   List<CatalogSupplier> catalogSuppliers = [];
   bool busy = false;
   Shop get s => widget.shop;
@@ -80,7 +80,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
     d.newSupplier = null;
     if (supplierChoice.startsWith('shop:')) d.supplierId = int.parse(supplierChoice.substring(5));
     if (supplierChoice.startsWith('cat:')) d.newSupplier = catalogSuppliers.firstWhere((x) => x.uid == supplierChoice.substring(4));
-    if (supplierChoice == 'new' && newSupplier.text.trim().isNotEmpty) d.newSupplier = CatalogSupplier(name: newSupplier.text.trim());
+    if (supplierChoice.startsWith('new:')) d.newSupplier = CatalogSupplier(name: supplierChoice.substring(4));
     final c = app.session(s);
     setState(() => busy = true);
     try {
@@ -151,7 +151,6 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
       for (final f in (s.snapshot['fields'] as List? ?? []))
         if ((f as Map)['isActive'] != false) '${f['label']}',
     ];
-    final inShop = {for (final x in _shopSuppliers) normName('${x['name']}')};
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -182,29 +181,12 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
             Section(
               title: 'Supplier',
               children: [
-                DropdownButtonFormField<String>(
-                  initialValue: supplierChoice,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Usually from'),
-                  items: [
-                    const DropdownMenuItem(value: 'none', child: Text('None')),
-                    for (final x in _shopSuppliers) DropdownMenuItem(value: 'shop:${x['id']}', child: Text('${x['name']}')),
-                    for (final x in catalogSuppliers.where((x) => !inShop.contains(normName(x.name))))
-                      DropdownMenuItem(
-                        value: 'cat:${x.uid}',
-                        child: Text('${x.name}  · from the catalogue', style: TextStyle(color: c.mutedForeground)),
-                      ),
-                    const DropdownMenuItem(value: 'new', child: Text('A new supplier…')),
-                  ],
-                  onChanged: (v) => setState(() => supplierChoice = v ?? 'none'),
+                SupplierField(
+                  value: supplierChoice,
+                  shop: [for (final x in _shopSuppliers) (id: (x['id'] as num).toInt(), name: '${x['name']}')],
+                  catalogue: [for (final x in catalogSuppliers) (uid: x.uid, name: x.name)],
+                  onChanged: (v) => setState(() => supplierChoice = v),
                 ),
-                if (supplierChoice == 'new') ...[
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: newSupplier,
-                    decoration: const InputDecoration(labelText: 'New supplier\'s name'),
-                  ),
-                ],
               ],
             ),
             if (isNew) ...[

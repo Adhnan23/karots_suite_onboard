@@ -58,7 +58,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
   Future<void> editOne(ReviewItem r) async {
     final db = AppScope.of(context).db;
     final name = TextEditingController(text: '${r.data['name'] ?? ''}');
-    final cat = TextEditingController(text: '${r.data['category'] ?? ''}');
     final sell = TextEditingController(text: '${r.data['selling'] ?? ''}');
     final ok = await showDialog<bool>(
       context: context,
@@ -72,11 +71,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
               decoration: const InputDecoration(labelText: 'Name'),
             ),
             if (r.kind == 'product') ...[
-              const SizedBox(height: 10),
-              TextField(
-                controller: cat,
-                decoration: const InputDecoration(labelText: 'Category (A > B)'),
-              ),
               const SizedBox(height: 10),
               TextField(
                 controller: sell,
@@ -99,7 +93,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       edited: {
         ...r.data,
         'name': name.text.trim(),
-        if (r.kind == 'product') ...{'category': cat.text.trim(), 'selling': sell.text.trim()},
+        if (r.kind == 'product') ...{'selling': sell.text.trim()},
       },
     );
     await load();
@@ -199,7 +193,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
     final fields = (d['fields'] as Map? ?? {}).entries.map((e) => '${e.key}: ${e.value}');
     return [
       if ('${d['barcode'] ?? ''}'.isNotEmpty) d['barcode'],
-      if ('${d['category'] ?? ''}'.isNotEmpty) d['category'],
       if ('${d['selling'] ?? ''}'.isNotEmpty) 'Rs ${d['selling']}',
       ...packs,
       ...fields,

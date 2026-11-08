@@ -99,7 +99,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                           subtitle: Text(
                             [
-                              if (p.category.isNotEmpty) p.category,
                               if (p.barcode.isNotEmpty) p.barcode,
                               if (p.packs.isNotEmpty) p.packs.map((k) => '${k.name} ×${k.size}').join(', '),
                               ...p.fields.entries.map((e) => '${e.key}: ${e.value}'),
