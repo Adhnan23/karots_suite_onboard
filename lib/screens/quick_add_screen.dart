@@ -67,8 +67,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
   }
 
   Future<void> add(CatalogProduct p) async {
-    final start = quickStart(p);
-    final cost = TextEditingController(text: start.cost), price = TextEditingController(text: start.price);
+    final cost = TextEditingController(), price = TextEditingController(text: p.selling); // cost differs by supplier: typed here
     final qty = TextEditingController(), expiry = TextEditingController();
     final go = await showModalBottomSheet<bool>(
       context: context,
@@ -81,11 +80,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(p.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            if (p.offers.isNotEmpty)
-              Text(
-                p.offers.map((o) => '${o.supplierName} ${o.cost}').join(' · '),
-                style: TextStyle(color: KsTokens.of(ctx).mutedForeground, fontSize: 13),
-              ),
+            if (p.supplier.isNotEmpty) Text('from ${p.supplier}', style: TextStyle(color: KsTokens.of(ctx).mutedForeground, fontSize: 13)),
             const SizedBox(height: 14),
             Row(
               children: [
@@ -204,12 +199,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
                   child: Card(
                     child: ListTile(
                       title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        [
-                          if (p.barcode.isNotEmpty) p.barcode,
-                          if (p.offers.isNotEmpty) '${p.offers.length} supplier${p.offers.length == 1 ? '' : 's'}',
-                        ].join(' · '),
-                      ),
+                      subtitle: Text([if (p.barcode.isNotEmpty) p.barcode, if (p.supplier.isNotEmpty) 'from ${p.supplier}'].join(' · ')),
                       trailing: const Icon(Icons.add_circle_outline_rounded),
                       onTap: () => add(p),
                     ),

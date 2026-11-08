@@ -98,7 +98,7 @@ class Db {
     raw.transaction((t) async {
       if (touch) x.updatedAt = DateTime.now();
       await t.insert('catalog_products', x.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
-      for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields', 'catalog_offers']) {
+      for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
         await t.delete(tb, where: 'product_uid = ?', whereArgs: [x.uid]);
       }
       for (final (i, c) in x.allCodes.indexed) {
@@ -110,15 +110,12 @@ class Db {
       for (final e in x.fields.entries) {
         await t.insert('catalog_fields', {'product_uid': x.uid, 'label': e.key, 'value': e.value});
       }
-      for (final o in x.offers) {
-        await t.insert('catalog_offers', {'product_uid': x.uid, ...o.toMap()});
-      }
     }),
   );
 
   Future<void> deleteProduct(String uid) => _w(
     raw.transaction((t) async {
-      for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields', 'catalog_offers']) {
+      for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
         await t.delete(tb, where: 'product_uid = ?', whereArgs: [uid]);
       }
       await t.delete('catalog_products', where: 'uid = ?', whereArgs: [uid]);
@@ -138,9 +135,6 @@ class Db {
     }
     for (final r in await raw.query('catalog_packs', where: 'product_uid IN ($q)', whereArgs: ids, orderBy: 'pos')) {
       out[r['product_uid']]!.packs.add(Pack.fromMap(r));
-    }
-    for (final r in await raw.query('catalog_offers', where: 'product_uid IN ($q)', whereArgs: ids, orderBy: 'supplier_name')) {
-      out[r['product_uid']]!.offers.add(Offer.fromMap(r));
     }
     for (final r in await raw.query('catalog_fields', where: 'product_uid IN ($q)', whereArgs: ids)) {
       out[r['product_uid']]!.fields[r['label'] as String] = r['value'] as String? ?? '';

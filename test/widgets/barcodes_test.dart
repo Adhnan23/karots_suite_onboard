@@ -39,7 +39,6 @@ void main() {
       kinds: {'grocery'},
       packs: [Pack(name: 'Box', size: '12', barcode: 'B1')],
       fields: {'Brand': 'Nestlé'},
-      offers: [Offer(supplierUid: 's', supplierName: 'Hemas', code: 'HM-9')],
     );
     final c = copyAsVariant(p);
     expect(c.uid, isNot(p.uid));
@@ -48,6 +47,5 @@ void main() {
     expect(c.packs.single.barcode, '');
     expect((c.cost, c.selling, c.fields['Brand']), ('900', '1050', 'Nestlé'));
     expect(c.kinds, {'grocery'});
-    expect(c.offers, isEmpty, reason: 'a supplier\'s code is for the other item');
   });
 }

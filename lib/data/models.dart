@@ -21,31 +21,6 @@ class Pack {
   );
 }
 
-/// What one supplier sells a product for: their own item code, cost and price.
-class Offer {
-  Offer({required this.supplierUid, required this.supplierName, this.code = '', this.cost = '', this.price = '', DateTime? updatedAt})
-    : updatedAt = updatedAt ?? DateTime.now();
-  final String supplierUid;
-  String supplierName, code, cost, price;
-  DateTime updatedAt;
-  Map<String, Object?> toMap() => {
-    'supplier_uid': supplierUid,
-    'supplier_name': supplierName,
-    'code': code,
-    'cost': cost,
-    'price': price,
-    'updated_at': updatedAt.toIso8601String(),
-  };
-  factory Offer.fromMap(Map m) => Offer(
-    supplierUid: '${m['supplier_uid']}',
-    supplierName: '${m['supplier_name'] ?? ''}',
-    code: '${m['code'] ?? ''}',
-    cost: '${m['cost'] ?? ''}',
-    price: '${m['price'] ?? ''}',
-    updatedAt: DateTime.tryParse('${m['updated_at']}'),
-  );
-}
-
 /// A product in the catalogue. Money is a decimal string. fields: custom field
 /// values by field label (Generic name → Paracetamol).
 class CatalogProduct {
@@ -68,7 +43,6 @@ class CatalogProduct {
     List<String>? barcodes,
     List<Pack>? packs,
     Map<String, String>? fields,
-    List<Offer>? offers,
     DateTime? updatedAt,
   }) : uid = uid ?? newUid(),
        kinds = kinds ?? {},
@@ -76,7 +50,6 @@ class CatalogProduct {
        barcodes = barcodes ?? [],
        packs = packs ?? [],
        fields = fields ?? {},
-       offers = offers ?? [],
        updatedAt = updatedAt ?? DateTime.now();
   final String uid;
   String name, nameLocal, barcode, category, unit, cost, selling, wholesale, taxRate, supplier;
@@ -87,8 +60,6 @@ class CatalogProduct {
   List<Pack> packs;
   Map<String, String> fields;
 
-  /// Each supplier's code, cost and price for it.
-  List<Offer> offers;
   DateTime updatedAt;
 
   /// Every code it scans by: the main one and the extras.
@@ -138,14 +109,12 @@ class CatalogProduct {
     'barcodes': barcodes,
     'packs': [for (final k in packs) k.toMap()],
     'fields': fields,
-    'offers': [for (final o in offers) o.toMap()],
   };
   factory CatalogProduct.fromJson(Map m) {
     final p = CatalogProduct.fromRow({...m.cast<String, Object?>(), 'uid': m['uid'] ?? newUid()});
     p.barcodes = [for (final b in (m['barcodes'] as List? ?? [])) '$b'];
     p.packs = [for (final k in (m['packs'] as List? ?? [])) Pack.fromMap(k as Map)];
     p.fields = (m['fields'] as Map? ?? {}).map((k, v) => MapEntry('$k', '$v'));
-    p.offers = [for (final o in (m['offers'] as List? ?? [])) Offer.fromMap(o as Map)];
     return p;
   }
 }

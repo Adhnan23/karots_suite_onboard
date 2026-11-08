@@ -25,7 +25,7 @@ class SupplierPage extends StatefulWidget {
 
 class _SupplierPageState extends State<SupplierPage> {
   late CatalogSupplier s = widget.supplier;
-  List<(CatalogProduct, Offer)> sells = [];
+  List<CatalogProduct> sells = [];
   String q = '';
 
   @override
@@ -38,8 +38,7 @@ class _SupplierPageState extends State<SupplierPage> {
     final all = await AppScope.of(context).db.products();
     final x = [
       for (final p in all)
-        for (final o in p.offers)
-          if (o.supplierUid == s.uid) (p, o),
+        if (p.supplier.toLowerCase() == s.name.toLowerCase()) p,
     ];
     if (mounted) setState(() => sells = x);
   }
@@ -88,7 +87,7 @@ class _SupplierPageState extends State<SupplierPage> {
     final n = q.trim().toLowerCase();
     final list = [
       for (final x in sells)
-        if (n.isEmpty || x.$1.name.toLowerCase().contains(n) || x.$2.code.toLowerCase().contains(n)) x,
+        if (n.isEmpty || x.name.toLowerCase().contains(n) || x.allCodes.any((c) => c.contains(n))) x,
     ];
     return Scaffold(
       appBar: AppBar(
@@ -120,7 +119,7 @@ class _SupplierPageState extends State<SupplierPage> {
               title: 'Their list',
               children: [
                 Text(
-                  'Shape their product list into the standard CSV (download the template), then import it. Products the catalogue has get their prices; new ones wait in Review. '
+                  'Shape their product list into the standard CSV (download the template), then import it. Products the catalogue has get their gaps filled; new ones wait in Review. '
                   'Extra columns (Generic name, Strength…) are kept as details.',
                   style: TextStyle(color: c.mutedForeground, fontSize: 13),
                 ),
@@ -143,21 +142,17 @@ class _SupplierPageState extends State<SupplierPage> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: TextField(
-                      decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Search name or their code'),
+                      decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Search name or barcode'),
                       onChanged: (v) => setState(() => q = v),
                     ),
                   ),
                 if (sells.isEmpty) Text('Nothing yet: import their list.', style: TextStyle(color: c.faint)),
-                for (final (p, o) in list.take(300))
+                for (final p in list.take(300))
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(p.name),
-                    subtitle: Text([if (o.code.isNotEmpty) o.code, if (p.barcode.isNotEmpty) p.barcode].join(' · ')),
-                    trailing: Text(
-                      [if (o.cost.isNotEmpty) 'cost ${o.cost}', if (o.price.isNotEmpty) 'price ${o.price}'].join('\n'),
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(fontSize: 13),
-                    ),
+                    subtitle: p.barcode.isEmpty ? null : Text(p.barcode),
+                    trailing: p.selling.isEmpty ? null : Text('Rs ${p.selling}'),
                   ),
               ],
             ),

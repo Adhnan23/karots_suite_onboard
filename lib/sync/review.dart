@@ -44,11 +44,7 @@ Future<void> _accept(Db db, ReviewItem r, Map<String, dynamic> data, Matcher mat
       for (final e in p.fields.entries) {
         same.fields.putIfAbsent(e.key, () => e.value);
       }
-      for (final o in p.offers) {
-        same.offers
-          ..removeWhere((x) => x.supplierUid == o.supplierUid)
-          ..add(o);
-      }
+      if (same.supplier.isEmpty) same.supplier = p.supplier;
       await db.saveProduct(same);
       match.add(same);
     } else {

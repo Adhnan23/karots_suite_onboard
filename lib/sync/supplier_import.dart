@@ -9,35 +9,32 @@ class ListImport {
 }
 
 /// A supplier's list into the catalogue: a product it already has (any barcode,
-/// else the name) gets this supplier's code and prices and its gaps filled (the
-/// catalogue's own name and details stay); a new one waits in Review.
+/// else the name) gets its gaps filled, and this supplier if it had none (the
+/// catalogue's own name, price and details stay); a new one waits in Review.
 Future<ListImport> importSupplierList(Db db, CatalogSupplier sup, String text) async {
-  final rows = readSupplierList(text);
   final match = await Matcher.load(db);
   var matched = 0, review = 0;
-  for (final r in rows) {
-    final offer = Offer(supplierUid: sup.uid, supplierName: sup.name, code: r.code, cost: r.cost, price: r.price);
-    final hit = match.find(codes: r.product.allCodes, name: r.product.name);
+  for (final r in readSupplierList(text)) {
+    final hit = match.find(codes: r.allCodes, name: r.name);
     if (hit != null) {
       final p = (await db.product(hit.uid))!;
-      for (final c in r.product.allCodes) {
+      for (final c in r.allCodes) {
         if (!p.allCodes.contains(c)) p.barcode.isEmpty ? p.barcode = c : p.barcodes.add(c);
       }
-      for (final e in r.product.fields.entries) {
+      for (final e in r.fields.entries) {
         p.fields.putIfAbsent(e.key, () => e.value);
       }
-      if (p.packs.isEmpty) p.packs = r.product.packs;
-      p.offers
-        ..removeWhere((o) => o.supplierUid == sup.uid)
-        ..add(offer);
+      if (p.packs.isEmpty) p.packs = r.packs;
+      if (p.selling.isEmpty) p.selling = r.selling;
+      if (p.supplier.isEmpty) p.supplier = sup.name;
       await db.saveProduct(p);
       match.add(p);
       matched++;
     } else {
-      final p = r.product..offers = [offer];
-      final key = p.allCodes.isNotEmpty ? p.allCodes.first : normName(p.name);
+      r.supplier = sup.name;
+      final key = r.allCodes.isNotEmpty ? r.allCodes.first : normName(r.name);
       final added = await db.addReview(
-        ReviewItem(shopUid: 'supplier:${sup.uid}', kind: 'product', data: p.toJson()),
+        ReviewItem(shopUid: 'supplier:${sup.uid}', kind: 'product', data: r.toJson()),
         key: key,
       );
       if (added) review++;

@@ -30,17 +30,6 @@ import 'push.dart';
   return (catalogue: hits, inShop: mine);
 }
 
-double _num(String s) => double.tryParse(s) ?? double.infinity;
-
-/// Where the sheet starts: the cheapest supplier's cost (else the catalogue's), and
-/// the catalogue's price (else a supplier's).
-({String cost, String price}) quickStart(CatalogProduct p) {
-  final offers = [...p.offers.where((o) => o.cost.isNotEmpty)]..sort((a, b) => _num(a.cost).compareTo(_num(b.cost)));
-  final cost = offers.isNotEmpty ? offers.first.cost : p.cost;
-  final price = p.selling.isNotEmpty ? p.selling : (p.offers.where((o) => o.price.isNotEmpty).firstOrNull?.price ?? '');
-  return (cost: cost, price: price);
-}
-
 /// The catalogue product for a shop with what was typed: no category (the shop
 /// files it), its prices, and one batch of old stock when there's a quantity.
 Draft quickDraft(CatalogProduct p, {required String cost, required String price, required String qty, required String expiry}) {

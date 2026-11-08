@@ -4,17 +4,7 @@ import 'package:karots_suite_onboard/sync/push.dart';
 import 'package:karots_suite_onboard/sync/quick.dart';
 
 void main() {
-  final panadol = CatalogProduct(
-    name: 'Panadol 500mg',
-    barcode: '111',
-    barcodes: ['112'],
-    category: 'X',
-    selling: '12',
-    offers: [
-      Offer(supplierUid: 'a', supplierName: 'Hemas', cost: '9.00', price: '12.50'),
-      Offer(supplierUid: 'b', supplierName: 'SPC', cost: '8.50', price: '12.00'),
-    ],
-  );
+  final panadol = CatalogProduct(name: 'Panadol 500mg', barcode: '111', barcodes: ['112'], category: 'X', selling: '12', supplier: 'Hemas');
   final amoxil = CatalogProduct(name: 'Amoxil 250', barcode: '555');
   final cat = [panadol, amoxil, CatalogProduct(name: 'Panadol Extra')];
 
@@ -32,12 +22,6 @@ void main() {
       8,
     );
     expect(quickFind(cat, [], '000').catalogue, isEmpty);
-  });
-
-  test('the sheet starts from the cheapest supplier\'s cost and the catalogue\'s price', () {
-    final s = quickStart(panadol);
-    expect((s.cost, s.price), ('8.50', '12'));
-    expect((quickStart(amoxil).cost, quickStart(amoxil).price), ('', ''));
   });
 
   test('what is sent: the catalogue product, no category, the typed prices and one batch', () {
