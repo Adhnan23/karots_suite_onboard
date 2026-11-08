@@ -59,10 +59,10 @@ String identifyPrompt(Shop s, String query, {String barcode = '', String hint = 
   final u = StringBuffer('Identify this item: ${query.trim()}');
   if (barcode.trim().isNotEmpty && barcode.trim() != query.trim()) u.write('\nBarcode: ${barcode.trim()}');
   if (hint.trim().isNotEmpty) u.write('\nAdditional context from the shop owner: ${hint.trim()}');
-  if (paths.isNotEmpty)
-    u.write(
-      '\n\nEXISTING shop categories (path — what is in it; reuse a fitting path verbatim, else propose new):\n- ${(paths.values.toList()..sort()).join('\n- ')}',
-    );
+  if (paths.isNotEmpty) {
+    final list = (paths.values.toList()..sort()).join('\n- ');
+    u.write('\n\nEXISTING shop categories (path — what is in it; reuse a fitting path verbatim, else propose new):\n- $list');
+  }
   final ticked = tickedFields(s);
   if (ticked.isNotEmpty) {
     u.write('\n\n$identifyFieldsRule\nFIELDS:\n');
