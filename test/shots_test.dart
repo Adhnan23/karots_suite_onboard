@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:karots_suite_onboard/data/db.dart';
+import 'package:karots_suite_onboard/main.dart';
 import 'package:karots_suite_onboard/data/models.dart';
 import 'package:karots_suite_onboard/screens/alternatives_screen.dart';
 import 'package:karots_suite_onboard/screens/catalog_screen.dart';
@@ -20,7 +21,6 @@ import 'package:karots_suite_onboard/screens/shops_screen.dart';
 import 'package:karots_suite_onboard/settings/secure.dart';
 import 'package:karots_suite_onboard/state.dart';
 import 'package:karots_suite_onboard/sync/push.dart';
-import 'package:karots_suite_onboard/theme/app_theme.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<void> font(String family, List<String> files) async {
@@ -181,10 +181,7 @@ void main() {
           await t.pumpWidget(
             RepaintBoundary(
               key: key,
-              child: AppScope(
-                state: app,
-                child: MaterialApp(debugShowCheckedModeBanner: false, theme: ksTheme(b, fonts: false), home: e.value),
-              ),
+              child: buildApp(app: app, home: e.value, fonts: false, mode: b == Brightness.dark ? ThemeMode.dark : ThemeMode.light),
             ),
           );
           await t.runAsync(() => Future.delayed(const Duration(milliseconds: 250)));

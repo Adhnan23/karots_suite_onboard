@@ -30,11 +30,20 @@ class _OnboardAppState extends State<OnboardApp> {
   }
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'Karots Suite Onboard',
-    debugShowCheckedModeBanner: false,
-    theme: ksTheme(Brightness.light),
-    darkTheme: ksTheme(Brightness.dark),
-    home: open && app != null ? AppScope(state: app!, child: const AppHome()) : LockScreen(store: store, onOpen: unlock),
+  Widget build(BuildContext context) => buildApp(
+    app: open ? app : null,
+    home: open && app != null ? const AppHome() : LockScreen(store: store, onOpen: unlock),
   );
 }
+
+/// The app's frame. The shared state sits above the navigator, so every page
+/// opened on top reaches it too (not only the first screen).
+Widget buildApp({required AppState? app, required Widget home, ThemeMode mode = ThemeMode.system, bool fonts = true}) => MaterialApp(
+  title: 'Karots Suite Onboard',
+  debugShowCheckedModeBanner: false,
+  theme: ksTheme(Brightness.light, fonts: fonts),
+  darkTheme: ksTheme(Brightness.dark, fonts: fonts),
+  themeMode: mode,
+  builder: (context, child) => app == null ? child! : AppScope(state: app, child: child!),
+  home: home,
+);
