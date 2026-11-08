@@ -44,4 +44,13 @@ void main() {
     final out = suppliersCsv([CatalogSupplier(name: 'Hemas', contact: 'Ravi', phone: '077', creditDays: 30)]);
     expect(out.split('\r\n').take(2).toList(), ['name,contact_person,phone,address,credit_days,opening_balance', 'Hemas,Ravi,077,,30,']);
   });
+
+  test('the count sheet is the Suite\'s stock-take format, from the shop\'s last pull', () {
+    final rows = [
+      {'name': 'Panadol, 500mg', 'barcode': '111', 'json': '{"name":"Panadol, 500mg","cost":"8.50","selling":"10.00","wholesale":"","openingQty":"40"}'},
+    ];
+    final lines = countSheetCsv(rows).split('\r\n');
+    expect(lines.first, 'barcode,name,current_qty,counted_qty,cost,selling_price,wholesale_price,batch,expiry');
+    expect(lines[1], '111,"Panadol, 500mg",40,,8.50,10.00,,,');
+  });
 }

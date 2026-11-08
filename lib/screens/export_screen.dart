@@ -134,6 +134,30 @@ class _ExportScreenState extends State<ExportScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Section(
+              title: 'Count sheet',
+              children: [
+                Text(
+                  'The shop\'s products from your last pull, to count: fill counted_qty there, then Stock-take → Import. '
+                  'Stock is as of that pull; at the shop, its own Stock-take count sheet is live.',
+                  style: TextStyle(color: c.mutedForeground, fontSize: 13),
+                ),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  onPressed: () async {
+                    final rows = await AppScope.of(context).db.shopProducts(s.uid);
+                    if (rows.isEmpty) {
+                      if (context.mounted) toast(context, 'Pull ${s.name} first', error: true);
+                      return;
+                    }
+                    await save('$slug-count-sheet.csv', countSheetCsv(rows));
+                  },
+                  icon: const Icon(Icons.download_rounded),
+                  label: const Text('Export count sheet'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
