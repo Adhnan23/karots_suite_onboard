@@ -144,9 +144,11 @@ class CatalogProductPage extends StatelessWidget {
             ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-        children: [ProductForm(key: form, product: product)],
+      body: Narrow(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+          children: [ProductForm(key: form, product: product)],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {

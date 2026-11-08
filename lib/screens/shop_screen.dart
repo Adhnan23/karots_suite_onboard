@@ -75,84 +75,86 @@ class _ShopScreenState extends State<ShopScreen> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-        children: [
-          Section(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(s.address, style: TextStyle(color: c.mutedForeground)),
-                  ),
-                  on ? Tag('Connected', tone: c.success) : Tag('Not connected'),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                [
-                  if (s.kind.isNotEmpty) s.kind,
-                  if (s.installId.isNotEmpty) 'install ${s.installId}',
-                  s.lastPull == null ? 'never pulled' : 'pulled ${DateFormat('d MMM, HH:mm').format(s.lastPull!)}',
-                ].join(' · '),
-                style: TextStyle(color: c.faint, fontSize: 13),
-              ),
-              if (s.plugins.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Wrap(spacing: 6, runSpacing: 6, children: [for (final p in s.plugins) Tag(p)]),
-              ],
-              if (snap['stockTake'] == false) ...[const SizedBox(height: 10), Tag('Stock-take is off: old stock can\'t be added', tone: c.warning)],
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: on
-                        ? OutlinedButton.icon(
-                            onPressed: () {
-                              app.disconnect(s);
-                              setState(() {});
-                            },
-                            icon: const Icon(Icons.link_off_rounded),
-                            label: const Text('Disconnect'),
-                          )
-                        : FilledButton.icon(
-                            onPressed: () async {
-                              if (await connectShop(context, s)) setState(() {});
-                            },
-                            icon: const Icon(Icons.link_rounded),
-                            label: const Text('Connect'),
-                          ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: on && step.isEmpty ? doPull : null,
-                      icon: step.isEmpty
-                          ? const Icon(Icons.download_rounded)
-                          : const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                      label: Text(step.isEmpty ? 'Pull' : step),
+      body: Narrow(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+          children: [
+            Section(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(s.address, style: TextStyle(color: c.mutedForeground)),
                     ),
-                  ),
+                    on ? Tag('Connected', tone: c.success) : Tag('Not connected'),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  [
+                    if (s.kind.isNotEmpty) s.kind,
+                    if (s.installId.isNotEmpty) 'install ${s.installId}',
+                    s.lastPull == null ? 'never pulled' : 'pulled ${DateFormat('d MMM, HH:mm').format(s.lastPull!)}',
+                  ].join(' · '),
+                  style: TextStyle(color: c.faint, fontSize: 13),
+                ),
+                if (s.plugins.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(spacing: 6, runSpacing: 6, children: [for (final p in s.plugins) Tag(p)]),
                 ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          for (final a in shopActions)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Card(
-                child: ListTile(
-                  leading: Icon(a.icon, color: c.foreground),
-                  title: Text(a.label, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: a.needsConnection && !on ? const Text('Connect first') : null,
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  enabled: !a.needsConnection || on,
-                  onTap: () => a.open(context, s),
+                if (snap['stockTake'] == false) ...[const SizedBox(height: 10), Tag('Stock-take is off: old stock can\'t be added', tone: c.warning)],
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: on
+                          ? OutlinedButton.icon(
+                              onPressed: () {
+                                app.disconnect(s);
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.link_off_rounded),
+                              label: const Text('Disconnect'),
+                            )
+                          : FilledButton.icon(
+                              onPressed: () async {
+                                if (await connectShop(context, s)) setState(() {});
+                              },
+                              icon: const Icon(Icons.link_rounded),
+                              label: const Text('Connect'),
+                            ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: on && step.isEmpty ? doPull : null,
+                        icon: step.isEmpty
+                            ? const Icon(Icons.download_rounded)
+                            : const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                        label: Text(step.isEmpty ? 'Pull' : step),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            for (final a in shopActions)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Card(
+                  child: ListTile(
+                    leading: Icon(a.icon, color: c.foreground),
+                    title: Text(a.label, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: a.needsConnection && !on ? const Text('Connect first') : null,
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    enabled: !a.needsConnection || on,
+                    onTap: () => a.open(context, s),
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

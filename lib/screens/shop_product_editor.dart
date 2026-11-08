@@ -103,12 +103,10 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
           if (again != true) break;
           r = await retryBatches(c, r);
         }
-        if (mounted)
-          toast(
-            context,
-            r.notes.isEmpty ? '${p.name} is in ${s.name}' : '${p.name} is in ${s.name}, but: ${r.notes.join('; ')}',
-            error: r.notes.isNotEmpty,
-          );
+        if (mounted) {
+          final msg = r.notes.isEmpty ? '${p.name} is in ${s.name}' : '${p.name} is in ${s.name}, but: ${r.notes.join('; ')}';
+          toast(context, msg, error: r.notes.isNotEmpty);
+        }
       } else {
         await pushUpdate(app.db, c, s, d);
         if (mounted) toast(context, '${p.name} changed in ${s.name}');
@@ -154,60 +152,68 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
     final inShop = {for (final x in _shopSuppliers) normName('${x['name']}')};
     return Scaffold(
       appBar: AppBar(
-        title: Text(isNew ? 'New product for ${s.name}' : 'Change in ${s.name}'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(isNew ? 'New product' : 'Change product'),
+            Text(s.name, style: TextStyle(fontSize: 13, color: c.mutedForeground)),
+          ],
+        ),
         actions: [
           if (isNew) TextButton.icon(onPressed: pickFromCatalogue, icon: const Icon(Icons.inventory_2_outlined), label: const Text('From catalogue')),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
-        children: [
-          if (editorTools.isNotEmpty) Wrap(spacing: 8, children: [for (final t in editorTools) t(context, s, form)]),
-          const SizedBox(height: 8),
-          ProductForm(
-            key: form,
-            product: d.product,
-            fieldLabels: labels,
-            categories: [for (final n in cats) _path(cats, n as Map)],
-            units: [for (final u in (s.snapshot['units'] as List? ?? [])) '${(u as Map)['abbreviation']}'],
-          ),
-          const SizedBox(height: 12),
-          Section(
-            title: 'Supplier',
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: supplierChoice,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Usually from'),
-                items: [
-                  const DropdownMenuItem(value: 'none', child: Text('None')),
-                  for (final x in _shopSuppliers) DropdownMenuItem(value: 'shop:${x['id']}', child: Text('${x['name']}')),
-                  for (final x in catalogSuppliers.where((x) => !inShop.contains(normName(x.name))))
-                    DropdownMenuItem(
-                      value: 'cat:${x.uid}',
-                      child: Text('${x.name}  · from the catalogue', style: TextStyle(color: c.mutedForeground)),
-                    ),
-                  const DropdownMenuItem(value: 'new', child: Text('A new supplier…')),
-                ],
-                onChanged: (v) => setState(() => supplierChoice = v ?? 'none'),
-              ),
-              if (supplierChoice == 'new') ...[
-                const SizedBox(height: 10),
-                TextField(
-                  controller: newSupplier,
-                  decoration: const InputDecoration(labelText: 'New supplier\'s name'),
-                ),
-              ],
-            ],
-          ),
-          if (isNew) ...[
+      body: Narrow(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+          children: [
+            if (editorTools.isNotEmpty) Wrap(spacing: 8, children: [for (final t in editorTools) t(context, s, form)]),
+            const SizedBox(height: 8),
+            ProductForm(
+              key: form,
+              product: d.product,
+              fieldLabels: labels,
+              categories: [for (final n in cats) _path(cats, n as Map)],
+              units: [for (final u in (s.snapshot['units'] as List? ?? [])) '${(u as Map)['abbreviation']}'],
+            ),
             const SizedBox(height: 12),
             Section(
-              title: 'Old stock',
-              children: [StockEditor(key: stock, draft: d)],
+              title: 'Supplier',
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: supplierChoice,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Usually from'),
+                  items: [
+                    const DropdownMenuItem(value: 'none', child: Text('None')),
+                    for (final x in _shopSuppliers) DropdownMenuItem(value: 'shop:${x['id']}', child: Text('${x['name']}')),
+                    for (final x in catalogSuppliers.where((x) => !inShop.contains(normName(x.name))))
+                      DropdownMenuItem(
+                        value: 'cat:${x.uid}',
+                        child: Text('${x.name}  · from the catalogue', style: TextStyle(color: c.mutedForeground)),
+                      ),
+                    const DropdownMenuItem(value: 'new', child: Text('A new supplier…')),
+                  ],
+                  onChanged: (v) => setState(() => supplierChoice = v ?? 'none'),
+                ),
+                if (supplierChoice == 'new') ...[
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: newSupplier,
+                    decoration: const InputDecoration(labelText: 'New supplier\'s name'),
+                  ),
+                ],
+              ],
             ),
+            if (isNew) ...[
+              const SizedBox(height: 12),
+              Section(
+                title: 'Old stock',
+                children: [StockEditor(key: stock, draft: d)],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: busy ? null : save,

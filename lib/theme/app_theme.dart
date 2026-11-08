@@ -25,6 +25,7 @@ ThemeData ksTheme(Brightness b, {bool fonts = true}) {
   const pill = StadiumBorder();
   final base = ThemeData(useMaterial3: true, colorScheme: scheme, brightness: b, fontFamily: fonts ? GoogleFonts.figtree().fontFamily : null);
   final text = base.textTheme;
+  final label = (text.labelLarge ?? const TextStyle()).copyWith(fontWeight: FontWeight.w700); // keeps the app's font
   return base.copyWith(
     scaffoldBackgroundColor: c.background,
     textTheme: text.apply(bodyColor: c.foreground, displayColor: c.foreground),
@@ -48,7 +49,7 @@ ThemeData ksTheme(Brightness b, {bool fonts = true}) {
         foregroundColor: c.brandForeground,
         shape: pill,
         minimumSize: const Size(0, 44),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        textStyle: label,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -57,10 +58,28 @@ ThemeData ksTheme(Brightness b, {bool fonts = true}) {
         side: BorderSide(color: c.border),
         shape: pill,
         minimumSize: const Size(0, 44),
+        textStyle: label,
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: c.foreground, shape: pill),
+      style: TextButton.styleFrom(foregroundColor: c.foreground, shape: pill, textStyle: label),
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: c.selected,
+      foregroundColor: c.selectedForeground,
+      shape: pill,
+      elevation: 2,
+      highlightElevation: 4,
+      extendedTextStyle: label,
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        selectedBackgroundColor: c.brandSoft,
+        selectedForegroundColor: c.foreground,
+        foregroundColor: c.foreground,
+        side: BorderSide(color: c.border),
+        textStyle: label.copyWith(fontWeight: FontWeight.w600),
+      ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -85,6 +104,9 @@ ThemeData ksTheme(Brightness b, {bool fonts = true}) {
       side: BorderSide(color: c.border),
       backgroundColor: c.muted,
       selectedColor: c.brandSoft,
+      labelStyle: TextStyle(color: c.foreground, fontWeight: FontWeight.w600),
+      secondaryLabelStyle: TextStyle(color: c.foreground, fontWeight: FontWeight.w600),
+      checkmarkColor: c.foreground,
     ),
     navigationBarTheme: NavigationBarThemeData(backgroundColor: c.card, indicatorColor: c.brandSoft),
     navigationRailTheme: NavigationRailThemeData(backgroundColor: c.card, indicatorColor: c.brandSoft),

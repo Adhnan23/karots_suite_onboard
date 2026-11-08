@@ -93,47 +93,49 @@ class _ExportScreenState extends State<ExportScreen> {
     final slug = s.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
     return Scaffold(
       appBar: AppBar(title: Text('${s.name} · export sheets')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Section(
-            title: 'Products',
-            children: [
-              SegmentedButton<bool>(
-                segments: [
-                  ButtonSegment(value: true, label: Text('Waiting to push · ${waiting.length}')),
-                  ButtonSegment(value: false, label: Text('Catalogue · ${s.kind.isEmpty ? 'all' : s.kind} · ${ofKind.length}')),
-                ],
-                selected: {useWaiting},
-                onSelectionChanged: (v) => setState(() => useWaiting = v.first),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'In the shop: Products → Sheets ▾ → tick Include custom fields → Import. One opening quantity per product: several batches add up.',
-                style: TextStyle(color: c.mutedForeground, fontSize: 13),
-              ),
-              const SizedBox(height: 10),
-              FilledButton.icon(
-                onPressed: list.isEmpty ? null : () => save('$slug-products.csv', productsCsv(list, s)),
-                icon: const Icon(Icons.download_rounded),
-                label: Text('Export ${list.length} products'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Section(
-            title: 'Suppliers',
-            children: [
-              Text('In the shop: Suppliers → Sheets ▾ → Import.', style: TextStyle(color: c.mutedForeground, fontSize: 13)),
-              const SizedBox(height: 10),
-              FilledButton.icon(
-                onPressed: suppliers.isEmpty ? null : () => save('$slug-suppliers.csv', suppliersCsv(suppliers)),
-                icon: const Icon(Icons.download_rounded),
-                label: Text('Export ${suppliers.length} suppliers'),
-              ),
-            ],
-          ),
-        ],
+      body: Narrow(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Section(
+              title: 'Products',
+              children: [
+                SegmentedButton<bool>(
+                  segments: [
+                    ButtonSegment(value: true, label: Text('Waiting to push · ${waiting.length}')),
+                    ButtonSegment(value: false, label: Text('Catalogue · ${s.kind.isEmpty ? 'all' : s.kind} · ${ofKind.length}')),
+                  ],
+                  selected: {useWaiting},
+                  onSelectionChanged: (v) => setState(() => useWaiting = v.first),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'In the shop: Products → Sheets ▾ → tick Include custom fields → Import. One opening quantity per product: several batches add up.',
+                  style: TextStyle(color: c.mutedForeground, fontSize: 13),
+                ),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  onPressed: list.isEmpty ? null : () => save('$slug-products.csv', productsCsv(list, s)),
+                  icon: const Icon(Icons.download_rounded),
+                  label: Text('Export ${list.length} products'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Section(
+              title: 'Suppliers',
+              children: [
+                Text('In the shop: Suppliers → Sheets ▾ → Import.', style: TextStyle(color: c.mutedForeground, fontSize: 13)),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  onPressed: suppliers.isEmpty ? null : () => save('$slug-suppliers.csv', suppliersCsv(suppliers)),
+                  icon: const Icon(Icons.download_rounded),
+                  label: Text('Export ${suppliers.length} suppliers'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

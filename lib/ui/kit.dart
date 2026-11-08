@@ -152,3 +152,18 @@ Future<T?> guard<T>(BuildContext context, Future<T> Function() f) async {
     return null;
   }
 }
+
+/// Forms and detail pages stay readable on a wide screen, like the Suite's admin.
+class Narrow extends StatelessWidget {
+  const Narrow({super.key, required this.child, this.max = 820});
+  final Widget child;
+  final double max;
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.topCenter,
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: max),
+      child: child,
+    ),
+  );
+}
