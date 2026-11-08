@@ -23,7 +23,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
   Future<void> load() async {
     final db = AppScope.of(context).db;
     final r = await db.reviews();
-    final s = {for (final x in await db.shops()) x.uid: x.name};
+    final s = {for (final x in await db.shops()) x.uid: x.name, for (final x in await db.suppliers()) 'supplier:${x.uid}': 'From ${x.name}'};
     if (!mounted) return;
     setState(() {
       rows = r;

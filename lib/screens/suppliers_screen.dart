@@ -8,6 +8,7 @@ import '../sync/match.dart';
 import '../sync/push.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
+import 'supplier_page.dart';
 
 /// Add or edit a supplier (every field reads from a photo too); returns it.
 Future<CatalogSupplier?> editSupplier(BuildContext context, [CatalogSupplier? x]) {
@@ -140,7 +141,10 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                           subtitle: Text(
                             [x.contact, x.phone, if (x.creditDays > 0) '${x.creditDays} days credit'].where((s) => s.isNotEmpty).join(' · '),
                           ),
-                          onTap: () => open(x),
+                          onTap: () async {
+                            await Navigator.push(context, MaterialPageRoute(builder: (_) => SupplierPage(supplier: x)));
+                            load();
+                          },
                           trailing: IconButton(
                             tooltip: 'Remove from the catalogue',
                             icon: const Icon(Icons.delete_outline),

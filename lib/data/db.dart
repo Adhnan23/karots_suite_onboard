@@ -27,7 +27,7 @@ class Db {
     path ??= p.join((await getApplicationSupportDirectory()).path, 'onboard.db');
     final raw = await f.openDatabase(
       path,
-      options: OpenDatabaseOptions(version: 3, onCreate: (d, _) => _create(d), onUpgrade: _upgrade),
+      options: OpenDatabaseOptions(version: 4, onCreate: (d, _) => _create(d), onUpgrade: _upgrade),
     );
     return Db._(raw);
   }
@@ -62,6 +62,7 @@ class Db {
       'CREATE INDEX review_key ON review(kind, key)',
       'CREATE TABLE pending(uid TEXT PRIMARY KEY, shop_uid TEXT, op TEXT, json TEXT, error TEXT, created_at TEXT)',
       _deletedTable,
+      _offersTable,
     ]) {
       await d.execute(s);
     }
@@ -69,7 +70,11 @@ class Db {
 
   static const _deletedTable = 'CREATE TABLE deleted(kind TEXT NOT NULL, uid TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY(kind, uid))';
 
+  static const _offersTable = '''CREATE TABLE catalog_offers(product_uid TEXT NOT NULL, supplier_uid TEXT NOT NULL, supplier_name TEXT,
+       code TEXT, cost TEXT, price TEXT, updated_at TEXT, PRIMARY KEY(product_uid, supplier_uid))''';
+
   static Future<void> _upgrade(Database d, int from, int to) async {
+    if (from < 4) await d.execute(_offersTable);
     if (from < 2) await d.execute('ALTER TABLE shops ADD COLUMN secret_name TEXT');
     if (from < 3) await d.execute(_deletedTable);
   }
@@ -93,7 +98,7 @@ class Db {
     raw.transaction((t) async {
       if (touch) x.updatedAt = DateTime.now();
       await t.insert('catalog_products', x.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
-      for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
+      for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields', 'catalog_offers']) {
         await t.delete(tb, where: 'product_uid = ?', whereArgs: [x.uid]);
       }
       for (final (i, c) in x.allCodes.indexed) {
@@ -105,12 +110,15 @@ class Db {
       for (final e in x.fields.entries) {
         await t.insert('catalog_fields', {'product_uid': x.uid, 'label': e.key, 'value': e.value});
       }
+      for (final o in x.offers) {
+        await t.insert('catalog_offers', {'product_uid': x.uid, ...o.toMap()});
+      }
     }),
   );
 
   Future<void> deleteProduct(String uid) => _w(
     raw.transaction((t) async {
-      for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
+      for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields', 'catalog_offers']) {
         await t.delete(tb, where: 'product_uid = ?', whereArgs: [uid]);
       }
       await t.delete('catalog_products', where: 'uid = ?', whereArgs: [uid]);
@@ -130,6 +138,9 @@ class Db {
     }
     for (final r in await raw.query('catalog_packs', where: 'product_uid IN ($q)', whereArgs: ids, orderBy: 'pos')) {
       out[r['product_uid']]!.packs.add(Pack.fromMap(r));
+    }
+    for (final r in await raw.query('catalog_offers', where: 'product_uid IN ($q)', whereArgs: ids, orderBy: 'supplier_name')) {
+      out[r['product_uid']]!.offers.add(Offer.fromMap(r));
     }
     for (final r in await raw.query('catalog_fields', where: 'product_uid IN ($q)', whereArgs: ids)) {
       out[r['product_uid']]!.fields[r['label'] as String] = r['value'] as String? ?? '';

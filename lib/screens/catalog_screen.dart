@@ -102,6 +102,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               if (p.barcode.isNotEmpty) p.barcode,
                               if (p.packs.isNotEmpty) p.packs.map((k) => '${k.name} ×${k.size}').join(', '),
                               ...p.fields.entries.map((e) => '${e.key}: ${e.value}'),
+                              if (p.offers.isNotEmpty) '${p.offers.length} supplier${p.offers.length == 1 ? '' : 's'}',
                             ].join(' · '),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -146,7 +147,27 @@ class CatalogProductPage extends StatelessWidget {
       body: Narrow(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-          children: [ProductForm(key: form, product: product)],
+          children: [
+            ProductForm(key: form, product: product),
+            if (product.offers.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Section(
+                title: 'Suppliers',
+                children: [
+                  for (final o in product.offers)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(o.supplierName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: o.code.isEmpty ? null : Text('Their code ${o.code}'),
+                      trailing: Text(
+                        [if (o.cost.isNotEmpty) 'cost ${o.cost}', if (o.price.isNotEmpty) 'price ${o.price}'].join('\n'),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(

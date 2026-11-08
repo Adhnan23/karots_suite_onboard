@@ -55,31 +55,50 @@ class _LockScreenState extends State<LockScreen> {
           constraints: const BoxConstraints(maxWidth: 380),
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              ClipRRect(borderRadius: BorderRadius.circular(KsTokens.radius), child: Image.asset('assets/icon.png', width: 64, height: 64, alignment: Alignment.centerLeft)),
-              const SizedBox(height: 18),
-              Text('Karots Suite Onboard', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 6),
-              Text.rich(TextSpan(style: TextStyle(color: c.mutedForeground), children: [
-                const TextSpan(text: 'Enter this hour\'s code for install '),
-                TextSpan(text: appInstallId, style: TextStyle(fontWeight: FontWeight.w800, color: c.foreground)),
-              ])),
-              const SizedBox(height: 22),
-              TextField(
-                controller: code,
-                autofocus: true,
-                obscureText: true,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(labelText: 'Code', counterText: ''),
-                onSubmitted: (_) => _go(),
-              ),
-              if (error.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 10), child: Text(error, style: TextStyle(color: c.danger))),
-              const SizedBox(height: 18),
-              FilledButton(onPressed: _go, child: const Text('Open')),
-              if (Platform.isAndroid) TextButton.icon(onPressed: _bio, icon: const Icon(Icons.fingerprint), label: const Text('Use fingerprint')),
-            ]),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(KsTokens.radius),
+                  child: Image.asset('assets/icon.png', width: 64, height: 64, alignment: Alignment.centerLeft),
+                ),
+                const SizedBox(height: 18),
+                Text('Karots Suite Onboard', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text.rich(
+                  TextSpan(
+                    style: TextStyle(color: c.mutedForeground),
+                    children: [
+                      const TextSpan(text: 'Enter this hour\'s code for install '),
+                      TextSpan(
+                        text: appInstallId,
+                        style: TextStyle(fontWeight: FontWeight.w800, color: c.foreground),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                TextField(
+                  controller: code,
+                  autofocus: true,
+                  obscureText: true,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(labelText: 'Code', counterText: ''),
+                  onSubmitted: (_) => _go(),
+                ),
+                if (error.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(error, style: TextStyle(color: c.danger)),
+                  ),
+                const SizedBox(height: 18),
+                FilledButton(onPressed: _go, child: const Text('Open')),
+                if (Platform.isAndroid) TextButton.icon(onPressed: _bio, icon: const Icon(Icons.fingerprint), label: const Text('Use fingerprint')),
+              ],
+            ),
           ),
         ),
       ),
