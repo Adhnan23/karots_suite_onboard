@@ -30,13 +30,23 @@ class StockBatch {
 /// id, or a new one to make, or none), its old stock, and remoteId when it changes
 /// a product the shop already has.
 class Draft {
-  Draft({required this.product, this.supplierId = 0, this.newSupplier, this.mode = StockMode.none, List<StockBatch>? batches, this.remoteId = 0})
-    : batches = batches ?? [];
+  Draft({
+    required this.product,
+    this.supplierId = 0,
+    this.newSupplier,
+    this.mode = StockMode.none,
+    List<StockBatch>? batches,
+    this.remoteId = 0,
+    this.aiPick,
+  }) : batches = batches ?? [];
   CatalogProduct product;
   int supplierId, remoteId;
   CatalogSupplier? newSupplier;
   StockMode mode;
   List<StockBatch> batches;
+
+  /// An AI Identify pick, learnt by the shop's AI Assistant on save.
+  Map<String, dynamic>? aiPick;
 
   List<StockBatch> get stock => switch (mode) {
     StockMode.none => [],

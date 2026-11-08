@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/models.dart';
 import '../sync/push.dart';
+import 'identify_sheet.dart';
 import 'shop_product_editor.dart';
 import 'shop_products_screen.dart';
 import 'shop_screen.dart';
@@ -11,6 +12,7 @@ void _go(BuildContext context, Widget page) => Navigator.push(context, MaterialP
 /// The shop screen's actions, in order.
 void registerShopActions() {
   if (shopActions.isNotEmpty) return;
+  editorTools.add(identifyButton);
   shopActions.addAll([
     (
       icon: Icons.add_box_outlined,

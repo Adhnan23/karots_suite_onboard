@@ -34,9 +34,13 @@ class ProductFormState extends State<ProductForm> {
   };
   final packs = GlobalKey<PacksEditorState>();
 
+  /// The AI answer picked, for the shop to learn on save (AI Assistant's extra).
+  Map<String, dynamic>? aiPick;
+
   /// Fills fields from outside (AI Identify); custom fields by label.
-  void fill({String? name, String? category, Map<String, String>? fieldValues}) {
+  void fill({String? name, String? category, Map<String, String>? fieldValues, Map<String, dynamic>? pick}) {
     setState(() {
+      aiPick = pick ?? aiPick;
       if (name != null && name.isNotEmpty) this.name.text = name;
       if (category != null && category.isNotEmpty) this.category.text = category;
       for (final e in (fieldValues ?? {}).entries) {

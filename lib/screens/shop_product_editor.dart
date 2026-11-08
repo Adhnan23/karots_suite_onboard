@@ -73,6 +73,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
     if (p.name.isEmpty) return toast(context, 'Give it a name', error: true);
     stock.currentState?.apply();
     d.product = p;
+    d.aiPick = form.currentState!.aiPick ?? d.aiPick;
     d.supplierId = 0;
     d.newSupplier = null;
     if (supplierChoice.startsWith('shop:')) d.supplierId = int.parse(supplierChoice.substring(5));
