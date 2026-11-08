@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:karots_suite_onboard/app.dart';
 import 'package:karots_suite_onboard/data/db.dart';
+import 'package:karots_suite_onboard/screens/suppliers_screen.dart';
 import 'package:karots_suite_onboard/main.dart';
 import 'package:karots_suite_onboard/data/models.dart';
 import 'package:karots_suite_onboard/screens/alternatives_screen.dart';
@@ -172,11 +174,15 @@ void main() {
       ),
       'duplicates': const DupesScreen(),
       'alternatives': AlternativesScreen(shop: shop),
+      'suppliers': const SuppliersScreen(),
+      'home': const AppHome(),
     };
     for (final size in [const Size(390, 844), const Size(1280, 800)]) {
       for (final b in Brightness.values) {
         for (final e in screens.entries) {
           await t.binding.setSurfaceSize(size);
+          t.view.physicalSize = size;
+          t.view.devicePixelRatio = 1;
           final key = GlobalKey();
           await t.pumpWidget(
             RepaintBoundary(

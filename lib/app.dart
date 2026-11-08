@@ -4,6 +4,7 @@ import 'screens/catalog_screen.dart';
 import 'screens/dupes_screen.dart';
 import 'screens/review_screen.dart';
 import 'screens/shops_screen.dart';
+import 'screens/suppliers_screen.dart';
 
 /// The app after unlock: Shops, Catalogue, Review, Duplicates. Phone = bottom bar,
 /// wide = side rail.
@@ -18,6 +19,7 @@ class _AppHomeState extends State<AppHome> {
   static const dests = [
     (Icons.storefront_outlined, Icons.storefront, 'Shops'),
     (Icons.inventory_2_outlined, Icons.inventory_2, 'Catalogue'),
+    (Icons.local_shipping_outlined, Icons.local_shipping, 'Suppliers'),
     (Icons.fact_check_outlined, Icons.fact_check, 'Review'),
     (Icons.merge_type_outlined, Icons.merge_type, 'Duplicates'),
   ];
@@ -25,8 +27,9 @@ class _AppHomeState extends State<AppHome> {
   Widget page(int i) => switch (i) {
     0 => const ShopsScreen(),
     1 => const CatalogScreen(),
-    2 => const ReviewScreen(),
-    3 => const DupesScreen(),
+    2 => const SuppliersScreen(),
+    3 => const ReviewScreen(),
+    4 => const DupesScreen(),
     _ => Center(child: Text(dests[i].$3)),
   };
 

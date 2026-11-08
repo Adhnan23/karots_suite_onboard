@@ -116,6 +116,7 @@ class Db {
   // ---- suppliers ----
 
   Future<void> saveSupplier(CatalogSupplier s) => raw.insert('catalog_suppliers', s.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
+  Future<void> deleteSupplier(String uid) => raw.delete('catalog_suppliers', where: 'uid = ?', whereArgs: [uid]);
   Future<List<CatalogSupplier>> suppliers() async => [
     for (final r in await raw.query('catalog_suppliers', orderBy: 'name COLLATE NOCASE')) CatalogSupplier.fromRow(r),
   ];

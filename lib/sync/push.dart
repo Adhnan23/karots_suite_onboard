@@ -176,6 +176,26 @@ Future<int> _supplier(Db db, SuiteClient c, Shop s, Draft d) async {
   return d.supplierId;
 }
 
+/// Puts a supplier into the shop (once: one it already has is used) and keeps it
+/// in the catalogue, marked with this shop and its kind. Returns the shop's id.
+Future<int> pushSupplier(Db db, SuiteClient c, Shop s, CatalogSupplier sup) async {
+  final id = await _supplier(
+    db,
+    c,
+    s,
+    Draft(
+      product: CatalogProduct(name: ''),
+      newSupplier: sup,
+    ),
+  );
+  final all = await db.suppliers();
+  final x = all.where((y) => normName(y.name) == normName(sup.name)).firstOrNull ?? sup;
+  x.sources.add(s.uid);
+  if (s.kind.isNotEmpty) x.kinds.add(s.kind);
+  await db.saveSupplier(x);
+  return id;
+}
+
 /// Keeps the catalogue's copy: joins the product it matches, or adds it.
 Future<void> keepCopy(Db db, Shop s, CatalogProduct p) async {
   final hit = await matchProduct(db, codes: p.allCodes, name: p.name);
