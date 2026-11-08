@@ -26,8 +26,21 @@ shops and to add to or change running ones as their system user.
 
 ## First run
 
-Choose an app PIN, then paste the support secret (`POS_SUPPORT_SECRET`). The secret stays
-in the device's secure storage, behind the PIN (and fingerprint on Android).
+The app has its own install ID, **3EE0E57C** (shown on the lock), and opens with that
+ID's hourly code, like a shop's system user or the Demo Room: from the PIN app, or
+`make support-pin ID=3EE0E57C` in Karots Suite. Nothing to set up first. Then add the
+support secret(s) under the key icon on Shops: they stay in this device's secure storage
+and are never in a backup or a sync. Fingerprint opens it on Android.
+
+The app carries only its ID's seed (`lib/lock/app_identity.dart`), never the secret.
+
+## Team, backup and sync
+
+- **Team:** devices that join one team key keep the same catalogue, suppliers and shops
+  by themselves on the same Wi-Fi (every 2 minutes and soon after a change, while open).
+- **Backup:** export a file of everything but the secrets; importing merges it.
+- **Sync with a device:** one-off, by address and a 6-digit code.
+- While connected to a shop, the app pulls it every 2 minutes and after each push.
 
 ## Build
 

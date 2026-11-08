@@ -17,6 +17,19 @@ List<String> supportPinsNow(String secret, String installId, DateTime now) {
   return [_code(seed, w), _code(seed, w - 1)];
 }
 
+/// A shop's (or the app's) seed: what the Suite bakes into a build.
+List<int> seedFor(String secret, String installId) => _seed(secret, installId);
+
+/// The code for the hour containing t, from a seed alone.
+String pinFromSeed(List<int> seed, DateTime t) => _code(seed, t.toUtc().millisecondsSinceEpoch ~/ 1000 ~/ 3600);
+
+/// This hour's code or the last hour's (as the Suite accepts).
+bool validPin(List<int> seed, String pin, DateTime now) {
+  if (pin.trim().length != 6) return false;
+  final w = now.toUtc().millisecondsSinceEpoch ~/ 1000 ~/ 3600;
+  return pin.trim() == _code(seed, w) || pin.trim() == _code(seed, w - 1);
+}
+
 List<int> _seed(String secret, String installId) =>
     Hmac(sha256, utf8.encode(secret)).convert(utf8.encode(_label + installId.trim().toUpperCase())).bytes;
 

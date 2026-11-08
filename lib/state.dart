@@ -80,7 +80,12 @@ class AppState extends ChangeNotifier {
       await db.saveShop(s);
     }
     final secret = await Secrets(store).forShop(s);
-    await c.signIn(secret, s.installId);
+    try {
+      await c.signIn(secret, s.installId);
+    } on SuiteError catch (e) {
+      if (secret.isEmpty && e.status == 401) throw SuiteError(401, e.code, 'Add your support secret first: the key icon on Shops');
+      rethrow;
+    }
     _sessions[s.uid] = c;
     _pullers.remove(s.uid)?.stop();
     _pullers[s.uid] = AutoPuller(() => pull(db, c, s))
