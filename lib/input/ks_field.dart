@@ -18,7 +18,13 @@ class KsField extends StatelessWidget {
     this.helper,
     this.onChanged,
     this.maxLines = 1,
+    this.onSubmitted,
+    this.focusNode,
+    this.autofocus = false,
   });
+  final ValueChanged<String>? onSubmitted;
+  final FocusNode? focusNode;
+  final bool autofocus;
   final String label;
   final TextEditingController controller;
   final FieldKind kind;
@@ -33,6 +39,9 @@ class KsField extends StatelessWidget {
       controller: controller,
       maxLines: maxLines,
       onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      focusNode: focusNode,
+      autofocus: autofocus,
       keyboardType: switch (kind) {
         FieldKind.number => const TextInputType.numberWithOptions(decimal: true),
         FieldKind.date => TextInputType.datetime,

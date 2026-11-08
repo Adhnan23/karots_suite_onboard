@@ -4,6 +4,7 @@ import '../data/models.dart';
 import '../sync/push.dart';
 import 'alternatives_screen.dart';
 import 'export_screen.dart';
+import 'quick_add_screen.dart';
 import 'identify_sheet.dart';
 import 'shop_product_editor.dart';
 import 'shop_products_screen.dart';
@@ -17,6 +18,7 @@ void registerShopActions() {
   if (shopActions.isNotEmpty) return;
   editorTools.add(identifyButton);
   shopActions.addAll([
+    (icon: Icons.bolt_rounded, label: 'Quick add: scan, price, quantity', needsConnection: false, open: (c, s) => _go(c, QuickAddScreen(shop: s))),
     (
       icon: Icons.add_box_outlined,
       label: 'New product',
