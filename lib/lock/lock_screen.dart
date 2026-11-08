@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 
+import '../settings/secrets.dart';
 import '../settings/secure.dart';
 import '../theme/tokens.dart';
 import 'app_lock.dart';
@@ -46,7 +47,7 @@ class _LockScreenState extends State<LockScreen> {
       if (pin.text.length < 4) return setState(() => error = 'Choose a PIN of 4 or more digits');
       if (secret.text.trim().isEmpty) return setState(() => error = 'Paste the support secret (POS_SUPPORT_SECRET)');
       await lock.setPin(pin.text);
-      await widget.store.write(supportSecretKey, secret.text.trim());
+      await Secrets(widget.store).save([(name: 'Main', secret: secret.text.trim())]);
       widget.onOpen();
     } else if (await lock.check(pin.text)) {
       widget.onOpen();

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/models.dart';
+import '../settings/secrets.dart';
 import '../state.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
+import 'secrets_screen.dart';
 import 'shop_screen.dart';
 
 const shopKinds = ['pharmacy', 'grocery', 'hardware', 'motor spares', 'phone shop', 'stationery', 'textile', 'other'];
@@ -52,7 +54,17 @@ class _ShopsScreenState extends State<ShopsScreen> {
           : ListView(
               padding: const EdgeInsets.only(bottom: 96),
               children: [
-                PageHead(title: 'Shops', sub: '${list.length} shop${list.length == 1 ? '' : 's'} · set up, pull and push'),
+                PageHead(
+                  title: 'Shops',
+                  sub: '${list.length} shop${list.length == 1 ? '' : 's'} · set up, pull and push',
+                  actions: [
+                    IconButton(
+                      tooltip: 'Support secrets',
+                      icon: const Icon(Icons.key_rounded),
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SecretsScreen())),
+                    ),
+                  ],
+                ),
                 if (list.isEmpty)
                   const Empty(
                     icon: Icons.storefront_rounded,
@@ -95,8 +107,11 @@ class _ShopsScreenState extends State<ShopsScreen> {
 }
 
 /// Add or edit a shop's profile; returns the saved shop.
-Future<Shop?> editShop(BuildContext context, Shop? s) {
+Future<Shop?> editShop(BuildContext context, Shop? s) async {
   final app = AppScope.of(context);
+  final secrets = await Secrets(app.store).all();
+  var secretName = s?.secretName ?? '';
+  if (!context.mounted) return null;
   final name = TextEditingController(text: s?.name ?? '');
   final address = TextEditingController(text: s?.address ?? 'http://');
   var kind = s?.kind ?? shopKinds.first;
@@ -132,6 +147,15 @@ Future<Shop?> editShop(BuildContext context, Shop? s) {
                 helperText: 'e.g. http://100.101.5.2:3000 (Tailscale) or http://192.168.1.20:3000',
               ),
             ),
+            if (secrets.length > 1) ...[
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                initialValue: secrets.any((x) => x.name == secretName) ? secretName : secrets.first.name,
+                decoration: const InputDecoration(labelText: 'Support secret'),
+                items: [for (final x in secrets) DropdownMenuItem(value: x.name, child: Text(x.name))],
+                onChanged: (v) => set(() => secretName = v ?? ''),
+              ),
+            ],
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () async {
@@ -140,7 +164,9 @@ Future<Shop?> editShop(BuildContext context, Shop? s) {
                 shop
                   ..name = name.text.trim()
                   ..kind = kind
-                  ..address = address.text.trim();
+                  ..address = address.text.trim()
+                  ..secretName = secretName
+                  ..secretName = secretName;
                 await app.db.saveShop(shop);
                 if (ctx.mounted) Navigator.pop(ctx, shop);
               },

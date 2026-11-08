@@ -160,11 +160,22 @@ class CatalogSupplier {
 /// A shop profile. snapshot holds what the last pull read: plugins, categories,
 /// units, Product Plus fields, Alternatives, AI settings, stock-take.
 class Shop {
-  Shop({String? uid, required this.name, this.kind = '', this.address = '', this.installId = '', this.lastPull, Map<String, dynamic>? snapshot})
-    : uid = uid ?? newUid(),
-      snapshot = snapshot ?? {};
+  Shop({
+    String? uid,
+    required this.name,
+    this.kind = '',
+    this.address = '',
+    this.installId = '',
+    this.secretName = '',
+    this.lastPull,
+    Map<String, dynamic>? snapshot,
+  }) : uid = uid ?? newUid(),
+       snapshot = snapshot ?? {};
   final String uid;
   String name, kind, address, installId;
+
+  /// Which support secret opens this shop ("" = the first).
+  String secretName;
   DateTime? lastPull;
   Map<String, dynamic> snapshot;
 
@@ -181,6 +192,7 @@ class Shop {
     'kind': kind,
     'address': address,
     'install_id': installId,
+    'secret_name': secretName,
     'last_pull': lastPull?.toIso8601String(),
     'snapshot': jsonEncode(snapshot),
   };
@@ -190,6 +202,7 @@ class Shop {
     kind: r['kind'] as String? ?? '',
     address: r['address'] as String? ?? '',
     installId: r['install_id'] as String? ?? '',
+    secretName: r['secret_name'] as String? ?? '',
     lastPull: DateTime.tryParse(r['last_pull'] as String? ?? ''),
     snapshot: (jsonDecode(r['snapshot'] as String? ?? '{}') as Map).cast<String, dynamic>(),
   );

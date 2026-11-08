@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'data/db.dart';
 import 'data/models.dart';
+import 'settings/secrets.dart';
 import 'settings/secure.dart';
 import 'suite/client.dart';
 
@@ -24,7 +25,7 @@ class AppState extends ChangeNotifier {
       s.installId = info.installId;
       await db.saveShop(s);
     }
-    final secret = await store.read(supportSecretKey) ?? '';
+    final secret = await Secrets(store).forShop(s);
     await c.signIn(secret, s.installId);
     _sessions[s.uid] = c;
     notifyListeners();

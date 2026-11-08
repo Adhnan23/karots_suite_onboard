@@ -25,7 +25,10 @@ class Db {
       }
     }
     path ??= p.join((await getApplicationSupportDirectory()).path, 'onboard.db');
-    final raw = await f.openDatabase(path, options: OpenDatabaseOptions(version: 1, onCreate: (d, _) => _create(d)));
+    final raw = await f.openDatabase(
+      path,
+      options: OpenDatabaseOptions(version: 2, onCreate: (d, _) => _create(d), onUpgrade: _upgrade),
+    );
     return Db._(raw);
   }
 
@@ -43,7 +46,7 @@ class Db {
       '''CREATE TABLE catalog_suppliers(uid TEXT PRIMARY KEY, name TEXT NOT NULL, contact TEXT, phone TEXT, address TEXT,
          credit_days INTEGER, kinds TEXT, sources TEXT)''',
       '''CREATE TABLE shops(uid TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT, address TEXT, install_id TEXT,
-         last_pull TEXT, snapshot TEXT)''',
+         last_pull TEXT, snapshot TEXT, secret_name TEXT)''',
       '''CREATE TABLE shop_products(shop_uid TEXT NOT NULL, remote_id INTEGER NOT NULL, catalog_uid TEXT, name TEXT,
          barcode TEXT, category TEXT, json TEXT, PRIMARY KEY(shop_uid, remote_id))''',
       'CREATE TABLE review(uid TEXT PRIMARY KEY, shop_uid TEXT, kind TEXT, key TEXT, json TEXT, status TEXT)',
@@ -52,6 +55,10 @@ class Db {
     ]) {
       await d.execute(s);
     }
+  }
+
+  static Future<void> _upgrade(Database d, int from, int to) async {
+    if (from < 2) await d.execute('ALTER TABLE shops ADD COLUMN secret_name TEXT');
   }
 
   // ---- catalogue products ----
