@@ -171,4 +171,32 @@ void main() {
     expect(sent('/api/v1/admin/inventory/intake/create').length, 1);
     expect(restocks, 1);
   });
+
+  test('the same new supplier on two products is made once in the shop', () async {
+    var made = 0;
+    shop.routes['POST /api/v1/admin/suppliers'] = (_, _) => {'id': 33 + made++};
+    await pushCreate(db, SuiteClient(shop.url), s, draft());
+    final second = draft()..product = CatalogProduct(name: 'Amoxil 500', category: 'Medicine', cost: '1', selling: '2');
+    await pushCreate(db, SuiteClient(shop.url), s, second);
+    expect(made, 1);
+    expect((sent('/api/v1/admin/inventory/intake/create').last['product'] as Map)['supplierId'], 33);
+  });
+
+  test('a change keeps the shop\'s own reorder level', () async {
+    shop.routes['GET /api/v1/admin/products/70'] = (_, _) => {'id': 70, 'name': 'Amoxil', 'reorderLevel': 25, 'reorderAuto': false, 'supplierId': 3};
+    shop.routes['PUT /api/v1/admin/products/70'] = (_, _) => {'id': 70};
+    await pushUpdate(
+      db,
+      SuiteClient(shop.url),
+      s,
+      Draft(
+        product: CatalogProduct(name: 'Amoxil 250mg', category: 'Medicine', unit: 'pcs'),
+        remoteId: 70,
+      ),
+    );
+    final put = jsonDecode(shop.calls.lastWhere((c) => c.$1 == 'PUT').$4) as Map;
+    expect(put['name'], 'Amoxil 250mg');
+    expect(put['reorderLevel'], 25);
+    expect(put['supplierId'], 3);
+  });
 }

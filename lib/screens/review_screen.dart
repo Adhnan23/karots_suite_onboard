@@ -42,8 +42,12 @@ class _ReviewScreenState extends State<ReviewScreen> {
   Future<void> act(bool accept, Iterable<String> uids) async {
     final db = AppScope.of(context).db;
     setState(() => busy = true);
-    for (final u in uids.toList()) {
-      accept ? await acceptReview(db, u) : await dropReview(db, u);
+    if (accept) {
+      await acceptReviews(db, uids.toList());
+    } else {
+      for (final u in uids.toList()) {
+        await dropReview(db, u);
+      }
     }
     picked.clear();
     busy = false;

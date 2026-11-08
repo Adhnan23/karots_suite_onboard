@@ -41,30 +41,111 @@ void main() {
     registerShopActions();
     sqfliteFfiInit();
     final db = (await t.runAsync(() => Db.openWith(path: inMemoryDatabasePath, factory: databaseFactoryFfi)))!;
-    final shop = Shop(name: 'Iman Pharmacy', kind: 'pharmacy', address: 'http://100.101.5.2:3000', installId: 'FC1A79F7', lastPull: DateTime(2026, 11, 8, 9, 30), snapshot: {
-      'plugins': ['aicatalog', 'alternatives', 'productplus', 'pharmacy', 'combos'],
-      'stockTake': true,
-      'categories': [{'id': 1, 'name': 'Medicine', 'path': []}, {'id': 2, 'name': 'Pain', 'path': [1]}],
-      'units': [{'id': 1, 'abbreviation': 'pcs'}],
-      'suppliers': [{'id': 3, 'name': 'Hemas Pharma'}],
-      'fields': [{'id': 1, 'key': 'generic_name', 'label': 'Generic name', 'isActive': true}, {'id': 2, 'key': 'strength', 'label': 'Strength', 'isActive': true}],
-      'alternatives': [{'id': 1, 'name': 'Paracetamol 500', 'tiers': [{'id': 1, 'name': 'Tablets', 'members': [{'productId': 1, 'name': 'Panadol 500mg'}, {'productId': 2, 'name': 'Calpol 500mg'}]}]}],
-    });
+    final shop = Shop(
+      name: 'Iman Pharmacy',
+      kind: 'pharmacy',
+      address: 'http://100.101.5.2:3000',
+      installId: 'FC1A79F7',
+      lastPull: DateTime(2026, 11, 8, 9, 30),
+      snapshot: {
+        'plugins': ['aicatalog', 'alternatives', 'productplus', 'pharmacy', 'combos'],
+        'stockTake': true,
+        'categories': [
+          {'id': 1, 'name': 'Medicine', 'path': []},
+          {
+            'id': 2,
+            'name': 'Pain',
+            'path': [1],
+          },
+        ],
+        'units': [
+          {'id': 1, 'abbreviation': 'pcs'},
+        ],
+        'suppliers': [
+          {'id': 3, 'name': 'Hemas Pharma'},
+        ],
+        'fields': [
+          {'id': 1, 'key': 'generic_name', 'label': 'Generic name', 'isActive': true},
+          {'id': 2, 'key': 'strength', 'label': 'Strength', 'isActive': true},
+        ],
+        'alternatives': [
+          {
+            'id': 1,
+            'name': 'Paracetamol 500',
+            'tiers': [
+              {
+                'id': 1,
+                'name': 'Tablets',
+                'members': [
+                  {'productId': 1, 'name': 'Panadol 500mg'},
+                  {'productId': 2, 'name': 'Calpol 500mg'},
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    );
     await t.runAsync(() async {
       await db.saveShop(shop);
       await db.saveShop(Shop(name: 'Ranjith Hardware', kind: 'hardware', address: 'http://192.168.1.20:3000'));
       for (final p in [
-        CatalogProduct(name: 'Panadol 500mg Tablets', barcode: '4792210100015', category: 'Medicine > Pain', selling: '12.00', kinds: {'pharmacy'},
-            packs: [Pack(name: 'Card', size: '12', selling: '140')], fields: {'Generic name': 'Paracetamol'}),
+        CatalogProduct(
+          name: 'Panadol 500mg Tablets',
+          barcode: '4792210100015',
+          category: 'Medicine > Pain',
+          selling: '12.00',
+          kinds: {'pharmacy'},
+          packs: [Pack(name: 'Card', size: '12', selling: '140')],
+          fields: {'Generic name': 'Paracetamol'},
+        ),
         CatalogProduct(name: 'panadol 500 mg tabs', category: 'Medicine > Pain', selling: '12.00', kinds: {'pharmacy'}),
         CatalogProduct(name: 'PVC Pipe 1" 6m', category: 'Plumbing', selling: '1850.00', kinds: {'hardware'}),
-        CatalogProduct(name: 'Amoxil 250mg Capsules', category: 'Medicine > Antibiotics', selling: '25.00', kinds: {'pharmacy'}, fields: {'Generic name': 'Amoxicillin'}),
+        CatalogProduct(
+          name: 'Amoxil 250mg Capsules',
+          category: 'Medicine > Antibiotics',
+          selling: '25.00',
+          kinds: {'pharmacy'},
+          fields: {'Generic name': 'Amoxicillin'},
+        ),
       ]) {
         await db.saveProduct(p);
       }
-      await db.addReview(ReviewItem(shopUid: shop.uid, kind: 'product', data: CatalogProduct(name: 'Piriton 4mg', barcode: '501', category: 'Medicine > Allergy', selling: '6.00', fields: {'Generic name': 'Chlorphenamine'}).toJson()), key: '501');
-      await db.addReview(ReviewItem(shopUid: shop.uid, kind: 'product', data: CatalogProduct(name: 'Siddhalepa Balm 25g', category: 'Ayurveda', selling: '320.00', packs: [Pack(name: 'Box', size: '6')]).toJson()), key: 'sb');
-      await db.addReview(ReviewItem(shopUid: shop.uid, kind: 'supplier', data: CatalogSupplier(name: 'State Pharmaceuticals', phone: '0112 345 678').toRow()), key: 'spc');
+      await db.addReview(
+        ReviewItem(
+          shopUid: shop.uid,
+          kind: 'product',
+          data: CatalogProduct(
+            name: 'Piriton 4mg',
+            barcode: '501',
+            category: 'Medicine > Allergy',
+            selling: '6.00',
+            fields: {'Generic name': 'Chlorphenamine'},
+          ).toJson(),
+        ),
+        key: '501',
+      );
+      await db.addReview(
+        ReviewItem(
+          shopUid: shop.uid,
+          kind: 'product',
+          data: CatalogProduct(
+            name: 'Siddhalepa Balm 25g',
+            category: 'Ayurveda',
+            selling: '320.00',
+            packs: [Pack(name: 'Box', size: '6')],
+          ).toJson(),
+        ),
+        key: 'sb',
+      );
+      await db.addReview(
+        ReviewItem(
+          shopUid: shop.uid,
+          kind: 'supplier',
+          data: CatalogSupplier(name: 'State Pharmaceuticals', phone: '0112 345 678').toRow(),
+        ),
+        key: 'spc',
+      );
     });
     final app = AppState(db, MemoryStore());
     final screens = <String, Widget>{
@@ -72,7 +153,23 @@ void main() {
       'shop': ShopScreen(shop: shop),
       'review': const ReviewScreen(),
       'catalogue': const CatalogScreen(),
-      'editor': ShopProductEditor(shop: shop, draft: Draft(product: CatalogProduct(name: 'Panadol 500mg Tablets', category: 'Medicine > Pain', cost: '9.50', selling: '12.00', fields: {'Generic name': 'Paracetamol'}), mode: StockMode.several, batches: [StockBatch(qty: '120', expiry: '2027-12-31'), StockBatch(qty: '48', expiry: '2028-06-30', selling: '13.00')])),
+      'editor': ShopProductEditor(
+        shop: shop,
+        draft: Draft(
+          product: CatalogProduct(
+            name: 'Panadol 500mg Tablets',
+            category: 'Medicine > Pain',
+            cost: '9.50',
+            selling: '12.00',
+            fields: {'Generic name': 'Paracetamol'},
+          ),
+          mode: StockMode.several,
+          batches: [
+            StockBatch(qty: '120', expiry: '2027-12-31'),
+            StockBatch(qty: '48', expiry: '2028-06-30', selling: '13.00'),
+          ],
+        ),
+      ),
       'duplicates': const DupesScreen(),
       'alternatives': AlternativesScreen(shop: shop),
     };
@@ -81,10 +178,15 @@ void main() {
         for (final e in screens.entries) {
           await t.binding.setSurfaceSize(size);
           final key = GlobalKey();
-          await t.pumpWidget(RepaintBoundary(
-            key: key,
-            child: AppScope(state: app, child: MaterialApp(debugShowCheckedModeBanner: false, theme: ksTheme(b, fonts: false), home: e.value)),
-          ));
+          await t.pumpWidget(
+            RepaintBoundary(
+              key: key,
+              child: AppScope(
+                state: app,
+                child: MaterialApp(debugShowCheckedModeBanner: false, theme: ksTheme(b, fonts: false), home: e.value),
+              ),
+            ),
+          );
           await t.runAsync(() => Future.delayed(const Duration(milliseconds: 250)));
           await t.pump();
           await t.runAsync(() => Future.delayed(const Duration(milliseconds: 100)));

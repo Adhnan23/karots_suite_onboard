@@ -5,22 +5,36 @@ import 'match.dart';
 /// Takes a review row into the catalogue (as edited, if it was). A product the
 /// catalogue already has by then (accepted from another shop) gains this shop and
 /// kind instead of a twin.
-Future<void> acceptReview(Db db, String uid, {Map<String, dynamic>? edited}) async {
-  final r = (await db.reviews()).firstWhere((x) => x.uid == uid);
-  final data = edited ?? r.data;
+Future<void> acceptReview(Db db, String uid, {Map<String, dynamic>? edited}) => acceptReviews(db, [uid], edited: edited);
+
+/// Accepts many in one pass: the review list and the catalogue are read once.
+Future<void> acceptReviews(Db db, List<String> uids, {Map<String, dynamic>? edited}) async {
+  final byUid = {for (final r in await db.reviews()) r.uid: r};
+  final match = await Matcher.load(db);
+  final suppliers = await db.suppliers();
+  for (final uid in uids) {
+    final r = byUid[uid];
+    if (r == null) continue;
+    await _accept(db, r, edited ?? r.data, match, suppliers);
+  }
+}
+
+Future<void> _accept(Db db, ReviewItem r, Map<String, dynamic> data, Matcher match, List<CatalogSupplier> suppliers) async {
+  final uid = r.uid;
   if (r.kind == 'supplier') {
     final s = CatalogSupplier.fromRow(data);
-    final same = (await db.suppliers()).where((x) => normName(x.name) == normName(s.name)).firstOrNull;
+    final same = suppliers.where((x) => normName(x.name) == normName(s.name)).firstOrNull;
     if (same != null) {
       same.sources.addAll(s.sources);
       same.kinds.addAll(s.kinds);
       await db.saveSupplier(same);
     } else {
       await db.saveSupplier(s);
+      suppliers.add(s);
     }
   } else {
     final p = CatalogProduct.fromJson(data);
-    final same = await matchProduct(db, codes: p.allCodes, name: p.name);
+    final same = match.find(codes: p.allCodes, name: p.name);
     if (same != null) {
       same.sources.addAll(p.sources);
       same.kinds.addAll(p.kinds);
@@ -31,8 +45,10 @@ Future<void> acceptReview(Db db, String uid, {Map<String, dynamic>? edited}) asy
         same.fields.putIfAbsent(e.key, () => e.value);
       }
       await db.saveProduct(same);
+      match.add(same);
     } else {
       await db.saveProduct(p);
+      match.add(p);
     }
   }
   await db.setReview(uid, 'accepted', data);

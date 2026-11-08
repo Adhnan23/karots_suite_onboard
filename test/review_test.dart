@@ -68,4 +68,30 @@ void main() {
     await acceptReview(db, r.uid);
     expect((await db.suppliers()).single.phone, '077');
   });
+
+  test('accepting many at once: one pass, twins still join', () async {
+    final rows = [
+      for (var i = 0; i < 300; i++)
+        ReviewItem(
+          shopUid: 's1',
+          kind: 'product',
+          data: CatalogProduct(name: 'P $i', barcode: 'B$i', sources: {'s1'}).toJson(),
+        ),
+      ReviewItem(
+        shopUid: 's2',
+        kind: 'product',
+        data: CatalogProduct(name: 'p  0', sources: {'s2'}).toJson(),
+      ),
+    ];
+    for (final (i, r) in rows.indexed) {
+      await db.addReview(r, key: 'k$i');
+    }
+    final t = Stopwatch()..start();
+    await acceptReviews(db, [for (final r in rows) r.uid]);
+    expect(t.elapsed.inSeconds, lessThan(5));
+    final all = await db.products();
+    expect(all.length, 300);
+    expect(all.firstWhere((p) => p.barcode == 'B0').sources, {'s1', 's2'});
+    expect(await db.reviews(), isEmpty);
+  });
 }

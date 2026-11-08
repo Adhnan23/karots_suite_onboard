@@ -122,7 +122,7 @@ Future<Map<String, Object?>> productBody(SuiteClient c, Shop s, Draft d, int sup
     'sellingPrice': p.selling,
     'wholesalePrice': p.wholesale,
     'taxRate': p.taxRate,
-    'reorderLevel': 0,
+    if (create) 'reorderLevel': 0, // a change keeps the shop's own level
     'trackSerial': p.trackSerial,
     'warrantyMonths': p.warrantyMonths,
     'supplierId': supplierId,
@@ -140,9 +140,18 @@ Future<Map<String, Object?>> productBody(SuiteClient c, Shop s, Draft d, int sup
   };
 }
 
-Future<int> _supplier(Db db, SuiteClient c, Draft d) async {
+/// The shop's id for the draft's supplier; a new one is made once (the shop's list
+/// in the snapshot remembers it until the next pull).
+Future<int> _supplier(Db db, SuiteClient c, Shop s, Draft d) async {
   final n = d.newSupplier;
   if (n == null) return d.supplierId;
+  final list = (s.snapshot['suppliers'] as List?) ?? [];
+  final have = list.where((x) => normName('${(x as Map)['name']}') == normName(n.name)).firstOrNull;
+  if (have != null) {
+    d.supplierId = ((have as Map)['id'] as num).toInt();
+    d.newSupplier = null;
+    return d.supplierId;
+  }
   final r = await c.createSupplier({
     'name': n.name,
     'contact': n.contact,
@@ -154,6 +163,11 @@ Future<int> _supplier(Db db, SuiteClient c, Draft d) async {
   if (!(await db.suppliers()).any((x) => normName(x.name) == normName(n.name))) await db.saveSupplier(n);
   d.supplierId = (r['id'] as num).toInt();
   d.newSupplier = null;
+  s.snapshot['suppliers'] = [
+    ...list,
+    {'id': d.supplierId, 'name': n.name},
+  ];
+  await db.saveShop(s);
   return d.supplierId;
 }
 
@@ -183,7 +197,7 @@ Future<void> keepCopy(Db db, Shop s, CatalogProduct p) async {
 Future<PushResult> pushCreate(Db db, SuiteClient c, Shop s, Draft d) async {
   final stock = d.stock;
   if (stock.isNotEmpty && s.snapshot['stockTake'] == false) throw PushError(stockTakeOff);
-  final sup = await _supplier(db, c, d);
+  final sup = await _supplier(db, c, s, d);
   final body = await productBody(c, s, d, sup);
   final first = stock.isEmpty ? null : stock.first;
   final item = await c.intakeCreate(body, quantity: first?.qty ?? '', expiry: first?.expiry ?? '');
@@ -253,7 +267,7 @@ Future<PushResult> retryBatches(SuiteClient c, PushResult r) {
 /// Changes a product the shop has (name, category, prices, fields…). Packs and
 /// extra barcodes are managed in the shop.
 Future<void> pushUpdate(Db db, SuiteClient c, Shop s, Draft d) async {
-  final sup = await _supplier(db, c, d);
+  final sup = await _supplier(db, c, s, d);
   final cur = await c.product(d.remoteId);
   final body = await productBody(c, s, d, sup == 0 ? ((cur['supplierId'] as num?)?.toInt() ?? 0) : sup, create: false);
   await c.updateProduct(d.remoteId, {...cur, ...body});
