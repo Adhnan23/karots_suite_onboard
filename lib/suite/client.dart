@@ -34,6 +34,7 @@ class SuiteClient {
   final http.Client _http;
   String _cookie = '';
   static const systemPhone = '0000000001';
+  static const devSystemPin = '2273';
   static const timeout = Duration(seconds: 60);
 
   Map<String, String> get _headers => {
@@ -83,10 +84,12 @@ class SuiteClient {
     return LoginInfo('${m['installId'] ?? ''}', '${m['shopName'] ?? ''}');
   }
 
-  /// Tries this hour's PIN, then the last hour's (a clock at the hour's edge).
+  /// Tries this hour's PIN, then the last hour's (a clock at the hour's edge),
+  /// then the Suite's public dev fallback 2273 (a dev or test build with no seed;
+  /// a shop build never takes it).
   Future<void> signIn(String secret, String installId, {DateTime? now}) async {
     SuiteError? last;
-    for (final pin in supportPinsNow(secret, installId, now ?? DateTime.now())) {
+    for (final pin in [...supportPinsNow(secret, installId, now ?? DateTime.now()), devSystemPin]) {
       try {
         await post('/auth/login', {'phone': systemPhone, 'pin': pin, 'deviceLabel': 'Karots Suite Onboard'});
         return;

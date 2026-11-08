@@ -86,4 +86,18 @@ void main() {
     final packs = await c.allPacks();
     expect(packs[7]!.single['name'], 'Card');
   });
+
+  test('a dev build with no seed takes the dev PIN 2273, tried last', () async {
+    shop.routes = {
+      'POST /api/v1/auth/login': (r, body) {
+        if ((jsonDecode(body) as Map)['pin'] != '2273') {
+          r.response.statusCode = 401;
+          return {'error': {'code': 'UNAUTHORIZED', 'message': 'wrong PIN'}};
+        }
+        return {'user': {'id': 1}};
+      },
+    };
+    await SuiteClient(shop.url).signIn('sec', 'AB12CD34');
+    expect([for (final c in shop.calls) jsonDecode(c.$4)['pin']].last, '2273');
+  });
 }
