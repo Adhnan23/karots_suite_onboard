@@ -63,8 +63,9 @@ class Db {
 
   // ---- catalogue products ----
 
-  Future<void> saveProduct(CatalogProduct x) => raw.transaction((t) async {
-    x.updatedAt = DateTime.now();
+  /// Saves a product; touch: false keeps its own last-changed time (a backup import).
+  Future<void> saveProduct(CatalogProduct x, {bool touch = true}) => raw.transaction((t) async {
+    if (touch) x.updatedAt = DateTime.now();
     await t.insert('catalog_products', x.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
     for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
       await t.delete(tb, where: 'product_uid = ?', whereArgs: [x.uid]);

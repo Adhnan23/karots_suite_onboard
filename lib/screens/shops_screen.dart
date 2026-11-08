@@ -6,6 +6,7 @@ import '../settings/secrets.dart';
 import '../state.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
+import 'backup_sheet.dart';
 import 'secrets_screen.dart';
 import 'shop_screen.dart';
 
@@ -58,6 +59,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
                   title: 'Shops',
                   sub: '${list.length} shop${list.length == 1 ? '' : 's'} · set up, pull and push',
                   actions: [
+                    IconButton(tooltip: 'Backup', icon: const Icon(Icons.cloud_sync_outlined), onPressed: () => showBackup(context)),
                     IconButton(
                       tooltip: 'Support secrets',
                       icon: const Icon(Icons.key_rounded),
