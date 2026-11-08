@@ -29,6 +29,22 @@ android {
         versionName = flutter.versionName
     }
 
+    // Two apps from one codebase: Karots Suite Onboard (the setup team's) and
+    // Karots Suite Shelf (a shop's own staff). Build with --flavor onboard|shelf.
+    flavorDimensions += "app"
+    productFlavors {
+        create("onboard") {
+            dimension = "app"
+            applicationId = "lk.karots.karots_suite_onboard"
+            manifestPlaceholders["appLabel"] = "Karots Onboard"
+        }
+        create("shelf") {
+            dimension = "app"
+            applicationId = "lk.karots.karots_suite_shelf"
+            manifestPlaceholders["appLabel"] = "Karots Shelf"
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

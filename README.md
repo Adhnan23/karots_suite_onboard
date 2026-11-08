@@ -58,7 +58,12 @@ The app carries only its ID's seed (`lib/lock/app_identity.dart`), never the sec
 ## Build
 
     flutter build linux          # build/linux/x64/release/bundle/
-    flutter build apk --release  # build/app/outputs/flutter-apk/app-release.apk
+    flutter build apk --release --flavor onboard -t lib/main.dart       # app-onboard-release.apk
+    flutter build apk --release --flavor shelf -t lib/main_shelf.dart   # app-shelf-release.apk (Karots Shelf)
+
+The same code builds a second Android app, **Karots Suite Shelf** (home screen: Karots Shelf), for a
+shop's own staff: one shop, signed in with their own phone number and PIN, no catalogue
+(`lib/shelf/`, `isShelf` in `lib/flavor.dart`). Android needs `--flavor`; Linux is always Onboard.
 
 ## Tests
 
