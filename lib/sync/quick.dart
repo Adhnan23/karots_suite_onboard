@@ -33,7 +33,7 @@ import 'push.dart';
 /// The catalogue product for a shop with what was typed: no category (the shop
 /// files it), its prices, and one batch of old stock when there's a quantity.
 Draft quickDraft(CatalogProduct p, {required String cost, required String price, required String qty, required String expiry}) {
-  final d = fromCatalogue(p);
+  final d = fromCatalogue(p)..useProductSupplier = true;
   d.product
     ..cost = cost.trim()
     ..selling = price.trim();

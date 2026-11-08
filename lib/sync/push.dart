@@ -42,12 +42,16 @@ class Draft {
     List<StockBatch>? batches,
     this.remoteId = 0,
     this.aiPick,
+    this.useProductSupplier = false,
   }) : batches = batches ?? [];
   CatalogProduct product;
   int supplierId, remoteId;
   CatalogSupplier? newSupplier;
   StockMode mode;
   List<StockBatch> batches;
+
+  /// Quick add: the product's usual supplier (from the catalogue) goes with it.
+  bool useProductSupplier;
 
   /// An AI Identify pick, learnt by the shop's AI Assistant on save.
   Map<String, dynamic>? aiPick;
@@ -97,12 +101,19 @@ class PushResult {
   final notes = <String>[];
 }
 
-int _unitId(Shop s, String unit) {
+/// The shop's id for the unit (by abbreviation); one it hasn't got is made there.
+Future<int> _unitId(SuiteClient c, Db db, Shop s, String unit) async {
   final units = [for (final u in (s.snapshot['units'] as List? ?? [])) u as Map];
-  Map? find(String a) => units.where((u) => '${u['abbreviation']}'.toLowerCase() == a.toLowerCase()).firstOrNull;
-  final u = find(unit.isEmpty ? 'pcs' : unit) ?? find('pcs') ?? units.firstOrNull;
-  if (u == null) throw PushError('Pull the shop first: its units aren\'t known');
-  return (u['id'] as num).toInt();
+  final want = unit.trim().isEmpty ? 'pcs' : unit.trim();
+  final hit = units.where((u) => '${u['abbreviation']}'.toLowerCase() == want.toLowerCase()).firstOrNull;
+  if (hit != null) return (hit['id'] as num).toInt();
+  final made = await c.post('/admin/units', {'name': want, 'abbreviation': want, 'allowDecimal': false}) as Map;
+  s.snapshot['units'] = [
+    ...units,
+    {'id': made['id'], 'name': want, 'abbreviation': want},
+  ];
+  await db.saveShop(s);
+  return (made['id'] as num).toInt();
 }
 
 /// The shop's custom field keys for the values held by label.
@@ -116,7 +127,7 @@ Map<String, String> fieldValues(Shop s, Map<String, String> byLabel) {
 }
 
 /// The Suite's ProductRequest for this draft (internal/api/dto_catalog.go).
-Future<Map<String, Object?>> productBody(SuiteClient c, Shop s, Draft d, int supplierId, {bool create = true}) async {
+Future<Map<String, Object?>> productBody(Db db, SuiteClient c, Shop s, Draft d, int supplierId, {bool create = true}) async {
   final p = d.product;
   final values = s.has('productplus') ? fieldValues(s, p.fields) : <String, String>{};
   return {
@@ -124,7 +135,7 @@ Future<Map<String, Object?>> productBody(SuiteClient c, Shop s, Draft d, int sup
     'nameLocal': p.nameLocal,
     'barcode': p.barcode,
     'categoryId': await c.categoryPath(p.category.trim().isEmpty ? 'Uncategorized' : p.category),
-    'unitId': _unitId(s, p.unit),
+    'unitId': await _unitId(c, db, s, p.unit),
     'costPrice': p.cost,
     'sellingPrice': p.selling,
     'wholesalePrice': p.wholesale,
@@ -235,8 +246,12 @@ Future<void> keepCopy(Db db, Shop s, CatalogProduct p, {int remoteId = 0}) async
 Future<PushResult> pushCreate(Db db, SuiteClient c, Shop s, Draft d) async {
   final stock = d.stock;
   if (stock.isNotEmpty && s.snapshot['stockTake'] == false) throw PushError(stockTakeOff);
+  if (d.useProductSupplier && d.supplierId == 0 && d.newSupplier == null && d.product.supplier.trim().isNotEmpty) {
+    final name = d.product.supplier.trim();
+    d.newSupplier = (await db.suppliers()).where((x) => normName(x.name) == normName(name)).firstOrNull ?? CatalogSupplier(name: name);
+  }
   final sup = await _supplier(db, c, s, d);
-  final body = await productBody(c, s, d, sup);
+  final body = await productBody(db, c, s, d, sup);
   final first = stock.isEmpty ? null : stock.first;
   final item = await c.intakeCreate(body, quantity: first?.qty ?? '', expiry: first?.expiry ?? '');
   final id = (item['productId'] as num).toInt();
@@ -310,8 +325,25 @@ Future<PushResult> retryBatches(SuiteClient c, PushResult r) {
 Future<void> pushUpdate(Db db, SuiteClient c, Shop s, Draft d) async {
   final sup = await _supplier(db, c, s, d);
   final cur = await c.product(d.remoteId);
-  final body = await productBody(c, s, d, sup == 0 ? ((cur['supplierId'] as num?)?.toInt() ?? 0) : sup, create: false);
+  final body = await productBody(db, c, s, d, sup == 0 ? ((cur['supplierId'] as num?)?.toInt() ?? 0) : sup, create: false);
   await c.updateProduct(d.remoteId, {...cur, ...body});
+  // Packs and barcodes go on separately: add what the shop hasn't got (removing
+  // one stays a job for the shop's own form).
+  final packs = {for (final k in await c.get('/admin/products/${d.remoteId}/packs') as List) '${(k as Map)['name']}'.toLowerCase()};
+  for (final k in d.product.packs) {
+    if (packs.contains(k.name.toLowerCase())) continue;
+    await c.post('/admin/products/${d.remoteId}/packs', {
+      'name': k.name,
+      'size': k.size,
+      'sellingPrice': k.selling,
+      'wholesalePrice': k.wholesale,
+      'barcode': k.barcode,
+    });
+  }
+  final codes = {for (final b in await c.get('/admin/products/${d.remoteId}/barcodes') as List) '${(b as Map)['barcode']}'};
+  for (final code in d.product.barcodes) {
+    if (!codes.contains(code)) await c.post('/admin/products/${d.remoteId}/barcodes', {'barcode': code, 'source': ''});
+  }
   await keepCopy(db, s, d.product, remoteId: d.remoteId);
 }
 

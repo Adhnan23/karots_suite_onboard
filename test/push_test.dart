@@ -47,6 +47,8 @@ void main() {
       'POST /api/v1/admin/inventory/intake/create': (_, _) => {'productId': 70, 'name': 'Amoxil'},
       'POST /api/v1/admin/products/70/packs': (_, _) => {'id': 1},
       'POST /api/v1/admin/products/70/barcodes': (_, _) => {'barcode': 'x'},
+      'GET /api/v1/admin/products/70/packs': (_, _) => [],
+      'GET /api/v1/admin/products/70/barcodes': (_, _) => [],
       'POST /api/v1/admin/inventory/intake/restock': (r, _) {
         restocks++;
         if (failSecondRestock && restocks == 2) {
@@ -87,7 +89,7 @@ void main() {
 
   List<Map> sent(String path) => [
     for (final c in shop.calls)
-      if (c.$2 == path) jsonDecode(c.$4) as Map,
+      if (c.$2 == path && c.$4.isNotEmpty) jsonDecode(c.$4) as Map,
   ];
 
   test('a new product with three batches: one create, two restocks; the catalogue gets it', () async {
@@ -247,5 +249,70 @@ void main() {
     final r = sent('/api/v1/admin/inventory/intake/restock').single;
     expect((r['productId'], r['quantity'], r['expiry'], r['costPrice']), (70, '15', '2028-01-31', '20'));
     expect(sent('/api/v1/admin/inventory/intake/create'), isEmpty);
+  });
+
+  test('a unit the shop hasn\'t got is made there first', () async {
+    shop.routes['POST /api/v1/admin/units'] = (_, _) => {'id': 9, 'name': 'Metre', 'abbreviation': 'm'};
+    final d = draft()..product.unit = 'm';
+    d.mode = StockMode.none;
+    await pushCreate(db, SuiteClient(shop.url), s, d);
+    expect(sent('/api/v1/admin/units'), isEmpty, reason: 'the shop already has m');
+    expect((sent('/api/v1/admin/inventory/intake/create').single['product'] as Map)['unitId'], 5);
+    final d2 = draft()..product.unit = 'roll';
+    d2.mode = StockMode.none;
+    await pushCreate(db, SuiteClient(shop.url), s, d2);
+    expect(sent('/api/v1/admin/units').single['abbreviation'], 'roll');
+    expect((sent('/api/v1/admin/inventory/intake/create').last['product'] as Map)['unitId'], 9);
+    expect((s.snapshot['units'] as List).any((u) => u['abbreviation'] == 'roll'), isTrue);
+  });
+
+  test('a quick add brings the product\'s usual supplier: the shop\'s own, or made there', () async {
+    var made = 0;
+    shop.routes['POST /api/v1/admin/suppliers'] = (_, _) => {'id': 60 + made++};
+    s.snapshot['suppliers'] = [
+      {'id': 3, 'name': 'Hemas'},
+    ];
+    final a = Draft(
+      product: CatalogProduct(name: 'A', supplier: 'HEMAS', unit: 'pcs'),
+      useProductSupplier: true,
+    );
+    await pushCreate(db, SuiteClient(shop.url), s, a);
+    expect((sent('/api/v1/admin/inventory/intake/create').last['product'] as Map)['supplierId'], 3);
+    final b = Draft(
+      product: CatalogProduct(name: 'B', supplier: 'Lanka Wire', unit: 'pcs'),
+      useProductSupplier: true,
+    );
+    await pushCreate(db, SuiteClient(shop.url), s, b);
+    expect((sent('/api/v1/admin/inventory/intake/create').last['product'] as Map)['supplierId'], 60);
+    final c = Draft(
+      product: CatalogProduct(name: 'C', supplier: 'Lanka Wire', unit: 'pcs'),
+    );
+    await pushCreate(db, SuiteClient(shop.url), s, c);
+    expect((sent('/api/v1/admin/inventory/intake/create').last['product'] as Map)['supplierId'], 0, reason: 'the editor said none');
+    expect(made, 1);
+  });
+
+  test('a change also sends packs and barcodes the shop hasn\'t got', () async {
+    shop.routes['GET /api/v1/admin/products/70'] = (_, _) => {'id': 70, 'name': 'Amoxil', 'reorderLevel': 0, 'supplierId': 0};
+    shop.routes['PUT /api/v1/admin/products/70'] = (_, _) => {'id': 70};
+    shop.routes['GET /api/v1/admin/products/70/packs'] = (_, _) => [
+      {'id': 1, 'name': 'Card', 'size': '10'},
+    ];
+    shop.routes['GET /api/v1/admin/products/70/barcodes'] = (_, _) => [
+      {'barcode': '555'},
+    ];
+    final p = CatalogProduct(
+      name: 'Amoxil',
+      barcode: '555',
+      barcodes: ['556'],
+      unit: 'pcs',
+      packs: [
+        Pack(name: 'Card', size: '10'),
+        Pack(name: 'Box', size: '100', selling: '2300'),
+      ],
+    );
+    await pushUpdate(db, SuiteClient(shop.url), s, Draft(product: p, remoteId: 70));
+    expect(sent('/api/v1/admin/products/70/packs').map((x) => x['name']), ['Box']);
+    expect(sent('/api/v1/admin/products/70/barcodes').map((x) => x['barcode']), ['556']);
   });
 }
