@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/drafts.dart';
 import '../data/models.dart';
 import '../state.dart';
 import '../sync/match.dart';
@@ -40,8 +41,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
     load();
   }
 
-  Future<void> open(CatalogProduct p) async {
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => CatalogProductPage(product: p)));
+  Future<void> open(CatalogProduct p, {bool keepDraft = false}) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CatalogProductPage(product: p, keepDraft: keepDraft),
+      ),
+    );
     load();
   }
 
@@ -52,7 +58,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     final list = filterCatalog(all, q, kind);
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => open(CatalogProduct(name: '')),
+        onPressed: () => open(catalogNewDraft ?? CatalogProduct(name: ''), keepDraft: true),
         icon: const Icon(Icons.add_rounded),
         label: const Text('New product'),
         backgroundColor: c.brand,
@@ -122,85 +128,119 @@ class _CatalogScreenState extends State<CatalogScreen> {
   }
 }
 
-/// Edit a catalogue product (or a new one), save or delete it.
-class CatalogProductPage extends StatelessWidget {
-  CatalogProductPage({super.key, required this.product});
+/// Edit a catalogue product (or a new one), save or delete it. keepDraft: the
+/// New product page, whose unsaved work is kept when going back.
+class CatalogProductPage extends StatefulWidget {
+  const CatalogProductPage({super.key, required this.product, this.keepDraft = false});
   final CatalogProduct product;
-  final form = GlobalKey<ProductFormState>();
+  final bool keepDraft;
+  @override
+  State<CatalogProductPage> createState() => _CatalogProductPageState();
+}
+
+class _CatalogProductPageState extends State<CatalogProductPage> {
+  var form = GlobalKey<ProductFormState>();
+  late CatalogProduct product = widget.product;
 
   @override
   Widget build(BuildContext context) {
     final db = AppScope.of(context).db;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(product.name.isEmpty ? 'New product' : product.name),
-        actions: [
-          if (product.name.isNotEmpty)
-            IconButton(
-              tooltip: 'Make a copy (another flavour or size)',
-              icon: const Icon(Icons.copy_all_rounded),
-              onPressed: () =>
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => CatalogProductPage(product: copyAsVariant(form.currentState!.read())))),
-            ),
-          if (product.name.isNotEmpty)
-            IconButton(
-              tooltip: 'Delete from the catalogue',
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () async {
-                if (!await confirm(
-                  context,
-                  'Delete ${product.name}?',
-                  'It leaves the catalogue, on your team\'s devices too. Shops keep their own copy.',
-                )) {
-                  return;
+    final restored = widget.keepDraft && identical(product, catalogNewDraft);
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        final f = form.currentState;
+        leaveEditor(
+          context,
+          changed: f?.changed ?? false,
+          keep: widget.keepDraft
+              ? () {
+                  if (f != null && f.changed) catalogNewDraft = f.read();
                 }
-                await db.deleteProduct(product.uid);
-                if (context.mounted) Navigator.pop(context);
-              },
-            ),
-        ],
-      ),
-      body: Narrow(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: identifyButton(context, Shop(name: 'the catalogue'), form),
-            ),
-            const SizedBox(height: 8),
-            FutureBuilder(
-              future: Future.wait([db.knownUnits(), db.suppliers()]),
-              builder: (context, snap) => snap.data == null
-                  ? const LinearProgressIndicator()
-                  : ProductForm(
-                      key: form,
-                      product: product,
-                      units: snap.data![0] as List<String>,
-                      suppliers: [for (final x in snap.data![1] as List<CatalogSupplier>) (uid: x.uid, name: x.name)],
-                    ),
-            ),
+              : null,
+        );
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(product.name.isEmpty ? 'New product' : product.name),
+          actions: [
+            if (product.name.isNotEmpty)
+              IconButton(
+                tooltip: 'Make a copy (another flavour or size)',
+                icon: const Icon(Icons.copy_all_rounded),
+                onPressed: () =>
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => CatalogProductPage(product: copyAsVariant(form.currentState!.read())))),
+              ),
+            if (product.name.isNotEmpty)
+              IconButton(
+                tooltip: 'Delete from the catalogue',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () async {
+                  if (!await confirm(
+                    context,
+                    'Delete ${product.name}?',
+                    'It leaves the catalogue, on your team\'s devices too. Shops keep their own copy.',
+                  )) {
+                    return;
+                  }
+                  await db.deleteProduct(product.uid);
+                  if (context.mounted) Navigator.pop(context);
+                },
+              ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final p = form.currentState!.read();
-          if (p.name.isEmpty) return toast(context, 'Give it a name', error: true);
-          for (final code in p.allCodes) {
-            final other = await db.productByBarcode(code);
-            if (other != null && other.uid != p.uid && context.mounted) {
-              return toast(context, '$code is already on “${other.name}”: if they are the same product, merge them in Duplicates', error: true);
+        body: Narrow(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+            children: [
+              if (restored)
+                DraftBar(
+                  onStartOver: () => setState(() {
+                    catalogNewDraft = null;
+                    product = CatalogProduct(name: '');
+                    form = GlobalKey<ProductFormState>();
+                  }),
+                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: identifyButton(context, Shop(name: 'the catalogue'), form),
+              ),
+              const SizedBox(height: 8),
+              FutureBuilder(
+                future: Future.wait([db.knownUnits(), db.suppliers()]),
+                builder: (context, snap) => snap.data == null
+                    ? const LinearProgressIndicator()
+                    : ProductForm(
+                        key: form,
+                        product: product,
+                        units: snap.data![0] as List<String>,
+                        suppliers: [for (final x in snap.data![1] as List<CatalogSupplier>) (uid: x.uid, name: x.name)],
+                      ),
+              ),
+            ],
+          ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () async {
+            final p = form.currentState!.read();
+            if (p.name.isEmpty) return toast(context, 'Give it a name', error: true);
+            for (final code in p.allCodes) {
+              final other = await db.productByBarcode(code);
+              if (other != null && other.uid != p.uid && context.mounted) {
+                return toast(context, '$code is already on “${other.name}”: if they are the same product, merge them in Duplicates', error: true);
+              }
             }
-          }
-          if (p.supplier.isNotEmpty && !(await db.suppliers()).any((x) => x.name.toLowerCase() == p.supplier.toLowerCase())) {
-            await db.saveSupplier(CatalogSupplier(name: p.supplier, kinds: {...p.kinds}));
-          }
-          await db.saveProduct(p);
-          if (context.mounted) Navigator.pop(context);
-        },
-        icon: const Icon(Icons.save_rounded),
-        label: const Text('Save'),
+            if (p.supplier.isNotEmpty && !(await db.suppliers()).any((x) => x.name.toLowerCase() == p.supplier.toLowerCase())) {
+              await db.saveSupplier(CatalogSupplier(name: p.supplier, kinds: {...p.kinds}));
+            }
+            await db.saveProduct(p);
+            if (widget.keepDraft) catalogNewDraft = null;
+            if (context.mounted) Navigator.pop(context);
+          },
+          icon: const Icon(Icons.save_rounded),
+          label: const Text('Save'),
+        ),
       ),
     );
   }

@@ -187,3 +187,38 @@ Future<bool> confirm(BuildContext context, String title, String body, {String ye
       ),
     ) ==
     true;
+
+/// Over a New product that came back from before: what it is and Start over.
+class DraftBar extends StatelessWidget {
+  const DraftBar({super.key, required this.onStartOver});
+  final VoidCallback onStartOver;
+  @override
+  Widget build(BuildContext context) {
+    final c = KsTokens.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
+        child: Row(
+          children: [
+            Icon(Icons.edit_note_rounded, color: c.foreground),
+            const SizedBox(width: 10),
+            const Expanded(child: Text('Your unsaved product, kept from before')),
+            TextButton(onPressed: onStartOver, child: const Text('Start over')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Going back from a product editor: a new product keeps its draft ([keep]);
+/// changes to one that exists ask first.
+Future<void> leaveEditor(BuildContext context, {required bool changed, void Function()? keep}) async {
+  final nav = Navigator.of(context);
+  if (keep != null) {
+    keep();
+    nav.pop();
+    return;
+  }
+  if (!changed || await confirm(context, 'Leave without saving?', 'Your changes to this product will be lost.', yes: 'Discard')) nav.pop();
+}

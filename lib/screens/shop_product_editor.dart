@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/drafts.dart';
 import '../data/models.dart';
 import '../input/supplier_field.dart';
 import '../state.dart';
@@ -23,21 +24,39 @@ String _path(List cats, Map n) {
 
 /// A product for one shop: from the catalogue or new, or one the shop has
 /// (remoteId set: a change, no stock). Save pushes now when connected, else waits.
+///
+/// keepDraft: the shop's New product page, whose unsaved work is kept when going
+/// back ([ShopProductEditor.newProduct] opens it).
 class ShopProductEditor extends StatefulWidget {
-  const ShopProductEditor({super.key, required this.shop, required this.draft});
+  const ShopProductEditor({super.key, required this.shop, required this.draft, this.keepDraft = false, this.supplier, this.restored = false});
   final Shop shop;
   final Draft draft;
+  final bool keepDraft, restored;
+  final String? supplier;
+
+  /// The shop's New product: its kept draft if there is one, else a fresh one.
+  factory ShopProductEditor.newProduct(Shop s) {
+    final kept = shopNewDrafts[s.uid];
+    return ShopProductEditor(
+      shop: s,
+      draft: kept?.draft ?? Draft(product: newShopProduct(s)),
+      supplier: kept?.supplier,
+      keepDraft: true,
+      restored: kept != null,
+    );
+  }
   @override
   State<ShopProductEditor> createState() => _ShopProductEditorState();
 }
 
 class _ShopProductEditorState extends State<ShopProductEditor> {
   var form = GlobalKey<ProductFormState>(); // a new key when another product is picked, so the form starts over
-  final stock = GlobalKey<StockEditorState>();
+  var stock = GlobalKey<StockEditorState>();
   late Draft d = widget.draft;
-  late String supplierChoice = d.supplierId > 0 ? 'shop:${d.supplierId}' : 'none';
+  late String supplierChoice = widget.supplier ?? (d.supplierId > 0 ? 'shop:${d.supplierId}' : 'none');
   List<CatalogSupplier> catalogSuppliers = [];
   bool busy = false;
+  late bool restored = widget.restored;
   Shop get s => widget.shop;
   bool get isNew => d.remoteId == 0;
 
@@ -116,6 +135,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
         if (mounted) toast(context, '${p.name} changed in ${s.name}');
       }
       if (c != null) app.pushed(s);
+      if (widget.keepDraft) shopNewDrafts.remove(s.uid);
       if (mounted) Navigator.pop(context, true);
     } on PushError catch (e) {
       if (!mounted) return;
@@ -154,112 +174,144 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
       for (final f in (s.snapshot['fields'] as List? ?? []))
         if ((f as Map)['isActive'] != false) '${f['label']}',
     ];
-    return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(isNew ? 'New product' : 'Change product'),
-            Text(s.name, style: TextStyle(fontSize: 13, color: c.mutedForeground)),
-          ],
-        ),
-        actions: [
-          if (isNew) TextButton.icon(onPressed: pickFromCatalogue, icon: const Icon(Icons.inventory_2_outlined), label: const Text('From catalogue')),
-          if (!isNew)
-            IconButton(
-              tooltip: 'Disable in this shop',
-              icon: const Icon(Icons.block_rounded),
-              onPressed: () async {
-                final app = AppScope.of(context);
-                final c = app.session(s);
-                if (c == null) return toast(context, 'Connect to ${s.name} first', error: true);
-                final yes = await showDialog<bool>(
-                  context: context,
-                  builder: (x) => AlertDialog(
-                    title: Text('Disable ${d.product.name} in ${s.name}?'),
-                    content: const Text(
-                      'It stops showing at the till. The shop keeps its sales and stock history, and can enable it again on its Products page.',
-                    ),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(x, false), child: const Text('Cancel')),
-                      FilledButton(onPressed: () => Navigator.pop(x, true), child: const Text('Disable')),
-                    ],
-                  ),
-                );
-                if (yes != true || !context.mounted) return;
-                final ok = await guard(context, () async {
-                  await disableInShop(app.db, c, s, d.remoteId);
-                  return true;
-                });
-                if (ok == true && context.mounted) {
-                  app.pushed(s);
-                  Navigator.pop(context, true);
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        final f = form.currentState;
+        leaveEditor(
+          context,
+          changed: f?.changed ?? false,
+          keep: widget.keepDraft
+              ? () {
+                  if (f == null || !(f.changed || f.read().name.isNotEmpty || supplierChoice != 'none')) return;
+                  stock.currentState?.apply();
+                  shopNewDrafts[s.uid] = (draft: d..product = f.read(), supplier: supplierChoice);
                 }
-              },
-            ),
-          IconButton(
-            tooltip: 'Make a copy (another flavour or size)',
-            icon: const Icon(Icons.copy_all_rounded),
-            onPressed: () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ShopProductEditor(
-                  shop: s,
-                  draft: Draft(product: copyAsVariant(form.currentState!.read()), mode: StockMode.none),
+              : null,
+        );
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(isNew ? 'New product' : 'Change product'),
+              Text(s.name, style: TextStyle(fontSize: 13, color: c.mutedForeground)),
+            ],
+          ),
+          actions: [
+            if (isNew)
+              TextButton.icon(onPressed: pickFromCatalogue, icon: const Icon(Icons.inventory_2_outlined), label: const Text('From catalogue')),
+            if (!isNew)
+              IconButton(
+                tooltip: 'Disable in this shop',
+                icon: const Icon(Icons.block_rounded),
+                onPressed: () async {
+                  final app = AppScope.of(context);
+                  final c = app.session(s);
+                  if (c == null) return toast(context, 'Connect to ${s.name} first', error: true);
+                  final yes = await showDialog<bool>(
+                    context: context,
+                    builder: (x) => AlertDialog(
+                      title: Text('Disable ${d.product.name} in ${s.name}?'),
+                      content: const Text(
+                        'It stops showing at the till. The shop keeps its sales and stock history, and can enable it again on its Products page.',
+                      ),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(x, false), child: const Text('Cancel')),
+                        FilledButton(onPressed: () => Navigator.pop(x, true), child: const Text('Disable')),
+                      ],
+                    ),
+                  );
+                  if (yes != true || !context.mounted) return;
+                  final ok = await guard(context, () async {
+                    await disableInShop(app.db, c, s, d.remoteId);
+                    return true;
+                  });
+                  if (ok == true && context.mounted) {
+                    app.pushed(s);
+                    Navigator.pop(context, true);
+                  }
+                },
+              ),
+            IconButton(
+              tooltip: 'Make a copy (another flavour or size)',
+              icon: const Icon(Icons.copy_all_rounded),
+              onPressed: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ShopProductEditor(
+                    shop: s,
+                    draft: Draft(product: copyAsVariant(form.currentState!.read()), mode: StockMode.none),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-      body: Narrow(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
-          children: [
-            if (editorTools.isNotEmpty) Wrap(spacing: 8, children: [for (final t in editorTools) t(context, s, form)]),
-            const SizedBox(height: 8),
-            ProductForm(
-              key: form,
-              product: d.product,
-              fieldLabels: labels,
-              categories: [for (final n in cats) _path(cats, n as Map)],
-              units: [for (final u in (s.snapshot['units'] as List? ?? [])) '${(u as Map)['abbreviation']}'],
-            ),
-            const SizedBox(height: 12),
-            Section(
-              title: 'Supplier',
-              children: [
-                SupplierField(
-                  value: supplierChoice,
-                  shop: [for (final x in _shopSuppliers) (id: (x['id'] as num).toInt(), name: '${x['name']}')],
-                  catalogue: [for (final x in catalogSuppliers) (uid: x.uid, name: x.name)],
-                  onChanged: (v) => setState(() => supplierChoice = v),
+          ],
+        ),
+        body: Narrow(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+            children: [
+              if (restored)
+                DraftBar(
+                  onStartOver: () => setState(() {
+                    shopNewDrafts.remove(s.uid);
+                    d = Draft(product: newShopProduct(s));
+                    supplierChoice = 'none';
+                    form = GlobalKey<ProductFormState>();
+                    stock = GlobalKey<StockEditorState>();
+                    restored = false;
+                  }),
+                ),
+              if (editorTools.isNotEmpty) Wrap(spacing: 8, children: [for (final t in editorTools) t(context, s, form)]),
+              const SizedBox(height: 8),
+              ProductForm(
+                key: form,
+                product: d.product,
+                fieldLabels: labels,
+                categories: [for (final n in cats) _path(cats, n as Map)],
+                units: [for (final u in (s.snapshot['units'] as List? ?? [])) '${(u as Map)['abbreviation']}'],
+              ),
+              const SizedBox(height: 12),
+              Section(
+                title: 'Supplier',
+                children: [
+                  SupplierField(
+                    value: supplierChoice,
+                    shop: [for (final x in _shopSuppliers) (id: (x['id'] as num).toInt(), name: '${x['name']}')],
+                    catalogue: [for (final x in catalogSuppliers) (uid: x.uid, name: x.name)],
+                    onChanged: (v) => setState(() => supplierChoice = v),
+                  ),
+                ],
+              ),
+              if (!isNew) ...[
+                const SizedBox(height: 12),
+                Section(
+                  title: 'Stock',
+                  children: [LotsSection(shop: s, productId: d.remoteId, product: d.product)],
                 ),
               ],
-            ),
-            if (!isNew) ...[
-              const SizedBox(height: 12),
-              Section(
-                title: 'Stock',
-                children: [LotsSection(shop: s, productId: d.remoteId, product: d.product)],
-              ),
+              if (isNew) ...[
+                const SizedBox(height: 12),
+                Section(
+                  title: 'Old stock',
+                  children: [StockEditor(key: stock, draft: d)],
+                ),
+              ],
             ],
-            if (isNew) ...[
-              const SizedBox(height: 12),
-              Section(
-                title: 'Old stock',
-                children: [StockEditor(key: stock, draft: d)],
-              ),
-            ],
-          ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: busy ? null : save,
-        backgroundColor: c.brand,
-        foregroundColor: c.brandForeground,
-        icon: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.cloud_upload_rounded),
-        label: Text(AppScope.of(context).connected(s) ? (isNew ? 'Put in ${s.name}' : 'Save in ${s.name}') : 'Save to push later'),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: busy ? null : save,
+          backgroundColor: c.brand,
+          foregroundColor: c.brandForeground,
+          icon: busy
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.cloud_upload_rounded),
+          label: Text(AppScope.of(context).connected(s) ? (isNew ? 'Put in ${s.name}' : 'Save in ${s.name}') : 'Save to push later'),
+        ),
       ),
     );
   }

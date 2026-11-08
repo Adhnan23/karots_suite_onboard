@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../data/models.dart';
-import '../sync/push.dart';
 import 'alternatives_screen.dart';
 import 'export_screen.dart';
 import 'quick_add_screen.dart';
@@ -19,18 +17,7 @@ void registerShopActions() {
   editorTools.add(identifyButton);
   shopActions.addAll([
     (icon: Icons.bolt_rounded, label: 'Quick add: scan, price, quantity', needsConnection: false, open: (c, s) => _go(c, QuickAddScreen(shop: s))),
-    (
-      icon: Icons.add_box_outlined,
-      label: 'New product',
-      needsConnection: false,
-      open: (c, s) => _go(
-        c,
-        ShopProductEditor(
-          shop: s,
-          draft: Draft(product: CatalogProduct(name: '')),
-        ),
-      ),
-    ),
+    (icon: Icons.add_box_outlined, label: 'New product', needsConnection: false, open: (c, s) => _go(c, ShopProductEditor.newProduct(s))),
     (icon: Icons.list_alt_rounded, label: 'Products in this shop', needsConnection: false, open: (c, s) => _go(c, ShopProductsScreen(shop: s))),
     (
       icon: Icons.local_shipping_outlined,

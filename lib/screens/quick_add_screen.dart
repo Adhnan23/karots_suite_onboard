@@ -220,7 +220,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
                         builder: (_) => ShopProductEditor(
                           shop: s,
                           draft: Draft(
-                            product: CatalogProduct(name: isCode ? '' : t, barcode: isCode ? t : ''),
+                            product: newShopProduct(s, name: isCode ? '' : t, barcode: isCode ? t : ''),
                           ),
                         ),
                       ),

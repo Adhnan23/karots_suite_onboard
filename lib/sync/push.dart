@@ -101,6 +101,19 @@ class PushResult {
   final notes = <String>[];
 }
 
+/// The unit a shop's new products start with: its default (Units page in the
+/// Suite), else pcs (a shop pulled before the Suite had one).
+String shopDefaultUnit(Shop s) {
+  for (final u in (s.snapshot['units'] as List? ?? [])) {
+    if ((u as Map)['isDefault'] == true) return '${u['abbreviation']}';
+  }
+  return 'pcs';
+}
+
+/// A new product for a shop: starts with the shop's default unit.
+CatalogProduct newShopProduct(Shop s, {String name = '', String barcode = ''}) =>
+    CatalogProduct(name: name, barcode: barcode, unit: shopDefaultUnit(s));
+
 /// The shop's id for the unit (by abbreviation); one it hasn't got is made there.
 Future<int> _unitId(SuiteClient c, Db db, Shop s, String unit) async {
   final units = [for (final u in (s.snapshot['units'] as List? ?? [])) u as Map];

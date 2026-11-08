@@ -15,9 +15,11 @@ final _kdf = Pbkdf2(macAlgorithm: Hmac.sha256(), iterations: _rounds, bits: 256)
 Future<String> sealSecrets(List<Secret> list, String passphrase) async {
   final salt = SecretKeyData.random(length: 16).bytes;
   final key = await _kdf.deriveKeyFromPassword(password: passphrase, nonce: salt);
-  final plain = utf8.encode(jsonEncode([
-    for (final x in list) {'name': x.name, 'secret': x.secret},
-  ]));
+  final plain = utf8.encode(
+    jsonEncode([
+      for (final x in list) {'name': x.name, 'secret': x.secret},
+    ]),
+  );
   final box = await _gcm.encrypt(plain, secretKey: key);
   return _prefix + base64Url.encode([...salt, ...box.concatenation()]);
 }

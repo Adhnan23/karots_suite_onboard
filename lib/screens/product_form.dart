@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../data/models.dart';
@@ -57,6 +59,17 @@ class ProductFormState extends State<ProductForm> {
       : supplierChoice.startsWith('cat:')
       ? (widget.suppliers ?? []).where((x) => 'cat:${x.uid}' == supplierChoice).firstOrNull?.name ?? p.supplier
       : '';
+
+  late final String _initial;
+
+  @override
+  void initState() {
+    super.initState();
+    _initial = jsonEncode(read().toJson());
+  }
+
+  /// Anything typed or picked since the form opened.
+  bool get changed => jsonEncode(read().toJson()) != _initial;
 
   /// The AI answer picked, for the shop to learn on save (AI Assistant's extra).
   Map<String, dynamic>? aiPick;

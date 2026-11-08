@@ -83,9 +83,7 @@ class _SecretsScreenState extends State<SecretsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                adding
-                    ? 'Paste the copy made on the other device and type its passphrase.'
-                    : 'Choose a passphrase (8 or more characters). The copy can only be opened with it: tell it to the other device by voice, not in the same message.',
+                adding ? 'Paste the copy made on the other device and type its passphrase.' : 'Choose a passphrase (8 or more characters). The copy can only be opened with it: tell it to the other device by voice, not in the same message.',
               ),
               if (adding) ...[
                 const SizedBox(height: 10),
