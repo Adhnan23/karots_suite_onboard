@@ -1,4 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../settings/secret_transfer.dart';
 
 import '../settings/secrets.dart';
 import '../state.dart';
@@ -62,11 +68,100 @@ class _SecretsScreenState extends State<SecretsScreen> {
     setState(() => list = next);
   }
 
+  /// Asks for the passphrase (and, when adding, the pasted copy). Null when cancelled.
+  Future<({String pass, String text})?> _ask({required bool adding}) async {
+    final text = TextEditingController();
+    final pass = TextEditingController();
+    String err = '';
+    return showDialog<({String pass, String text})>(
+      context: context,
+      builder: (d) => StatefulBuilder(
+        builder: (d, set) => AlertDialog(
+          title: Text(adding ? 'Add from another device' : 'Send to another device'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                adding
+                    ? 'Paste the copy made on the other device and type its passphrase.'
+                    : 'Choose a passphrase (8 or more characters). The copy can only be opened with it: tell it to the other device by voice, not in the same message.',
+              ),
+              if (adding) ...[
+                const SizedBox(height: 10),
+                TextField(
+                  controller: text,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Copy (KSEC1:…)',
+                    suffixIcon: IconButton(
+                      tooltip: 'Paste',
+                      icon: const Icon(Icons.content_paste_rounded),
+                      onPressed: () async => text.text = (await Clipboard.getData('text/plain'))?.text ?? '',
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 10),
+              TextField(
+                controller: pass,
+                obscureText: true,
+                decoration: InputDecoration(labelText: 'Passphrase', errorText: err.isEmpty ? null : err),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(d), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                if (!adding && pass.text.length < 8) return set(() => err = '8 or more characters');
+                if (adding && (text.text.trim().isEmpty || pass.text.isEmpty)) return set(() => err = 'Paste the copy and type its passphrase');
+                Navigator.pop(d, (pass: pass.text, text: text.text));
+              },
+              child: Text(adding ? 'Add' : 'Make the copy'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> send() async {
+    final a = await _ask(adding: false);
+    if (a == null) return;
+    final copy = await sealSecrets(list, a.pass);
+    await Clipboard.setData(ClipboardData(text: copy));
+    if (Platform.isAndroid) await SharePlus.instance.share(ShareParams(text: copy, subject: 'Karots Onboard secrets'));
+    if (mounted) toast(context, 'Copied (sealed). Open Support secrets → Add from another device there.');
+  }
+
+  Future<void> receive() async {
+    final a = await _ask(adding: true);
+    if (a == null) return;
+    try {
+      final got = await openSecrets(a.text, a.pass);
+      final next = mergeSecrets(list, got);
+      await store.save(next);
+      setState(() => list = next);
+      if (mounted) toast(context, 'Added ${got.length} secret${got.length == 1 ? '' : 's'}');
+    } on WrongPassphrase {
+      if (mounted) toast(context, 'Wrong passphrase', error: true);
+    } on FormatException {
+      if (mounted) toast(context, 'That isn\'t a secrets copy from Karots Onboard', error: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = KsTokens.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Support secrets')),
+      appBar: AppBar(
+        title: const Text('Support secrets'),
+        actions: [
+          if (list.isNotEmpty) IconButton(tooltip: 'Send to another device', icon: const Icon(Icons.ios_share_rounded), onPressed: send),
+          IconButton(tooltip: 'Add from another device', icon: const Icon(Icons.download_rounded), onPressed: receive),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: c.brand,
         foregroundColor: c.brandForeground,

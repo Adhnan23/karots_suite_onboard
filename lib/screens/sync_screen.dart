@@ -91,7 +91,7 @@ class _SyncHostScreenState extends State<SyncHostScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Open only while this screen is: going back closes it. Support secrets never travel.',
+                'Open only while this screen is: going back closes it. Support secrets never travel here (send them sealed under the key icon).',
                 style: TextStyle(color: c.faint, fontSize: 13),
               ),
             ],

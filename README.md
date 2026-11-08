@@ -30,7 +30,10 @@ The app has its own install ID, **3EE0E57C** (shown on the lock), and opens with
 ID's hourly code, like a shop's system user or the Demo Room: from the PIN app, or
 `make support-pin ID=3EE0E57C` in Karots Suite. Nothing to set up first. Then add the
 support secret(s) under the key icon on Shops: they stay in this device's secure storage
-and are never in a backup or a sync. Fingerprint opens it on Android.
+and are never in a backup or a sync. To move them, use the share icon there (Send to
+another device): a copy sealed with a passphrase (AES-256-GCM, PBKDF2), which the other
+device opens with Add from another device. On Android the phone's own unlock opens the
+app too (fingerprint, or its PIN / pattern).
 
 The app carries only its ID's seed (`lib/lock/app_identity.dart`), never the secret.
 

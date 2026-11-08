@@ -91,7 +91,7 @@ class _TeamScreenState extends State<TeamScreen> {
           padding: const EdgeInsets.all(20),
           children: [
             Text(
-              'Devices in a team keep the same catalogue, suppliers and shops: on the same Wi-Fi, while the app is open, every 2 minutes and soon after a change. Support secrets stay on each device.',
+              'Devices in a team keep the same catalogue, suppliers and shops: on the same Wi-Fi, while the app is open, every 2 minutes and soon after a change. Support secrets stay on each device (send them sealed under the key icon).',
               style: TextStyle(color: c.mutedForeground),
             ),
             const SizedBox(height: 16),
