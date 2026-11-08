@@ -12,7 +12,8 @@ import 'app_identity.dart';
 
 /// Opens with this hour's code for the app's own install ID (from the PIN app),
 /// like a shop's system user or the Demo Room. Nothing to set up first: support
-/// secrets are added afterwards, under the key icon. Fingerprint on Android.
+/// secrets are added afterwards, under the key icon. On Android the phone's own
+/// unlock opens it too (fingerprint, or its PIN / pattern).
 class LockScreen extends StatefulWidget {
   const LockScreen({super.key, required this.store, required this.onOpen});
   final KeyStore store;
@@ -25,19 +26,31 @@ class _LockScreenState extends State<LockScreen> {
   final code = TextEditingController();
   String error = '';
   static final _seed = hex.decode(appSeedHex);
+  final _auth = LocalAuthentication();
+  bool _canUnlock = false; // the phone has a fingerprint, face or screen lock
 
   @override
   void initState() {
     super.initState();
-    _bio();
+    if (Platform.isAndroid) {
+      _auth.isDeviceSupported().then((ok) {
+        if (!mounted || !ok) return;
+        setState(() => _canUnlock = true);
+        _bio();
+      }, onError: (_) {});
+    }
   }
 
+  /// Fingerprint, or the phone's own PIN / pattern when there's none.
   Future<void> _bio() async {
-    if (!Platform.isAndroid) return;
     try {
-      final auth = LocalAuthentication();
-      if (await auth.canCheckBiometrics && await auth.authenticate(localizedReason: 'Open Karots Onboard')) widget.onOpen();
-    } catch (_) {}
+      if (await _auth.authenticate(localizedReason: 'Open Karots Onboard')) widget.onOpen();
+    } on LocalAuthException catch (e) {
+      const quiet = {LocalAuthExceptionCode.userCanceled, LocalAuthExceptionCode.systemCanceled, LocalAuthExceptionCode.userRequestedFallback};
+      if (mounted && !quiet.contains(e.code)) setState(() => error = 'Phone unlock didn\'t work (${e.code.name}). Use the code.');
+    } catch (e) {
+      if (mounted) setState(() => error = 'Phone unlock didn\'t work. Use the code.');
+    }
   }
 
   void _go() {
@@ -96,7 +109,7 @@ class _LockScreenState extends State<LockScreen> {
                   ),
                 const SizedBox(height: 18),
                 FilledButton(onPressed: _go, child: const Text('Open')),
-                if (Platform.isAndroid) TextButton.icon(onPressed: _bio, icon: const Icon(Icons.fingerprint), label: const Text('Use fingerprint')),
+                if (_canUnlock) TextButton.icon(onPressed: _bio, icon: const Icon(Icons.fingerprint), label: const Text('Unlock with this phone')),
               ],
             ),
           ),
