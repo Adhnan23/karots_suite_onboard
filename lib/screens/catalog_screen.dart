@@ -5,6 +5,7 @@ import '../state.dart';
 import '../sync/match.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
+import '../sync/variant.dart';
 import 'product_form.dart';
 
 /// Search by name or any barcode; kind: only products seen in that kind of shop.
@@ -135,6 +136,13 @@ class CatalogProductPage extends StatelessWidget {
         actions: [
           if (product.name.isNotEmpty)
             IconButton(
+              tooltip: 'Make a copy (another flavour or size)',
+              icon: const Icon(Icons.copy_all_rounded),
+              onPressed: () =>
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => CatalogProductPage(product: copyAsVariant(form.currentState!.read())))),
+            ),
+          if (product.name.isNotEmpty)
+            IconButton(
               tooltip: 'Delete from the catalogue',
               icon: const Icon(Icons.delete_outline),
               onPressed: () async {
@@ -174,6 +182,12 @@ class CatalogProductPage extends StatelessWidget {
         onPressed: () async {
           final p = form.currentState!.read();
           if (p.name.isEmpty) return toast(context, 'Give it a name', error: true);
+          for (final code in p.allCodes) {
+            final other = await db.productByBarcode(code);
+            if (other != null && other.uid != p.uid && context.mounted) {
+              return toast(context, '$code is already on “${other.name}”: if they are the same product, merge them in Duplicates', error: true);
+            }
+          }
           await db.saveProduct(p);
           if (context.mounted) Navigator.pop(context);
         },

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../data/models.dart';
+import '../input/barcodes_editor.dart';
 import '../input/category_field.dart';
 import '../input/field_kind.dart';
 import '../input/ks_field.dart';
+import '../theme/tokens.dart';
 import '../ui/kit.dart';
 import 'packs_editor.dart';
 
@@ -27,7 +29,7 @@ class ProductFormState extends State<ProductForm> {
   late final name = TextEditingController(text: p.name);
   late final local = TextEditingController(text: p.nameLocal);
   late final barcode = TextEditingController(text: p.barcode);
-  late final extra = TextEditingController(text: p.barcodes.join(' '));
+  final extra = GlobalKey<BarcodesEditorState>();
   late final category = TextEditingController(text: p.category);
   late final unit = TextEditingController(text: p.unit);
   late final cost = TextEditingController(text: p.cost);
@@ -67,8 +69,8 @@ class ProductFormState extends State<ProductForm> {
     'wholesale': wholesale.text.trim(),
     'warranty_months': int.tryParse(warranty.text.trim()) ?? 0,
     'barcodes': [
-      for (final b in extra.text.split(RegExp(r'[\s,;]+')))
-        if (b.isNotEmpty && b != barcode.text.trim()) b,
+      for (final b in extra.currentState?.codes ?? p.barcodes)
+        if (b != barcode.text.trim()) b,
     ],
     'packs': [for (final k in packs.currentState?.read() ?? p.packs) k.toMap()],
     'fields': {
@@ -113,10 +115,11 @@ class ProductFormState extends State<ProductForm> {
           const SizedBox(height: 10),
           KsField(label: 'Local name', controller: local, helper: 'Sinhala or Tamil, as the shop says it'),
           const SizedBox(height: 10),
-          _pair(
-            KsField(label: 'Barcode', controller: barcode, kind: FieldKind.barcode),
-            KsField(label: 'Other barcodes', controller: extra, kind: FieldKind.barcode),
-          ),
+          KsField(label: 'Barcode', controller: barcode, kind: FieldKind.barcode),
+          const SizedBox(height: 10),
+          Text('Other barcodes', style: TextStyle(fontSize: 13, color: KsTokens.of(context).mutedForeground)),
+          const SizedBox(height: 6),
+          BarcodesEditor(key: extra, codes: p.barcodes),
           const SizedBox(height: 10),
           if (widget.categories != null) ...[CategoryField(controller: category, paths: widget.categories!), const SizedBox(height: 10)],
           _pick('Unit', unit, widget.units),

@@ -7,6 +7,7 @@ import '../sync/match.dart';
 import '../sync/push.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
+import '../sync/variant.dart';
 import 'lots_section.dart';
 import 'product_form.dart';
 import 'stock_editor.dart';
@@ -164,6 +165,19 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
         ),
         actions: [
           if (isNew) TextButton.icon(onPressed: pickFromCatalogue, icon: const Icon(Icons.inventory_2_outlined), label: const Text('From catalogue')),
+          IconButton(
+            tooltip: 'Make a copy (another flavour or size)',
+            icon: const Icon(Icons.copy_all_rounded),
+            onPressed: () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ShopProductEditor(
+                  shop: s,
+                  draft: Draft(product: copyAsVariant(form.currentState!.read()), mode: StockMode.none),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
       body: Narrow(
