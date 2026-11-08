@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/models.dart';
 import '../sync/push.dart';
 import 'alternatives_screen.dart';
+import 'export_screen.dart';
 import 'identify_sheet.dart';
 import 'shop_product_editor.dart';
 import 'shop_products_screen.dart';
@@ -30,5 +31,6 @@ void registerShopActions() {
     (icon: Icons.list_alt_rounded, label: 'Products in this shop', needsConnection: false, open: (c, s) => _go(c, ShopProductsScreen(shop: s))),
     (icon: Icons.cloud_upload_outlined, label: 'Waiting to push', needsConnection: false, open: (c, s) => _go(c, PendingScreen(shop: s))),
     (icon: Icons.swap_horiz_rounded, label: 'Alternatives', needsConnection: false, open: (c, s) => _go(c, AlternativesScreen(shop: s))),
+    (icon: Icons.table_view_rounded, label: 'Export sheets (CSV)', needsConnection: false, open: (c, s) => _go(c, ExportScreen(shop: s))),
   ]);
 }
