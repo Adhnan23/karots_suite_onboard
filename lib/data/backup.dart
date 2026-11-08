@@ -18,6 +18,7 @@ Future<String> exportBackup(Db db) async {
     'products': [for (final p in await db.products()) p.toJson()],
     'suppliers': [for (final x in await db.suppliers()) x.toRow()],
     'shops': shops,
+    'deleted': await db.deletions(),
   });
 }
 
@@ -34,9 +35,30 @@ Future<ImportResult> importBackup(Db db, String text) async {
   if (m is! Map || m['kind'] != 'karots_onboard.backup') throw const FormatException('That isn\'t a Karots Onboard backup');
   var products = 0, suppliers = 0, shops = 0;
 
+  // Deletions first: what the other device deleted goes here too, unless it was
+  // changed here after that (a product's own time says so).
+  for (final r in (m['deleted'] as List? ?? [])) {
+    final kind = '${r['kind']}', uid = '${r['uid']}', at = DateTime.parse('${r['at']}');
+    final mine = (await db.deletedAt(kind))[uid];
+    if (mine != null && !at.isAfter(mine)) continue;
+    if (kind == 'product') {
+      final p = await db.product(uid);
+      if (p != null && p.updatedAt.isAfter(at)) continue;
+      if (p != null) await db.deleteProduct(uid);
+    } else if (kind == 'supplier') {
+      await db.deleteSupplier(uid);
+    } else if (kind == 'shop') {
+      await db.deleteShop(uid);
+    }
+    await db.markDeleted(kind, uid, at);
+  }
+  final goneProducts = await db.deletedAt('product'), goneSuppliers = await db.deletedAt('supplier'), goneShops = await db.deletedAt('shop');
+
   final match = await Matcher.load(db);
   for (final j in (m['products'] as List? ?? [])) {
     final p = CatalogProduct.fromJson(j as Map);
+    final gone = goneProducts[p.uid];
+    if (gone != null && !p.updatedAt.isAfter(gone)) continue; // deleted here after its last change
     final here = await db.product(p.uid) ?? match.find(codes: p.allCodes, name: p.name);
     if (here == null) {
       await db.saveProduct(p, touch: false);
@@ -54,6 +76,7 @@ Future<ImportResult> importBackup(Db db, String text) async {
   final have = {for (final x in await db.suppliers()) normName(x.name)};
   for (final r in (m['suppliers'] as List? ?? [])) {
     final x = CatalogSupplier.fromRow(r as Map);
+    if (goneSuppliers.containsKey(x.uid)) continue;
     if (have.add(normName(x.name))) {
       await db.saveSupplier(x);
       suppliers++;
@@ -63,6 +86,7 @@ Future<ImportResult> importBackup(Db db, String text) async {
   final mine = {for (final s in await db.shops()) s.uid: s};
   for (final r in (m['shops'] as List? ?? [])) {
     final s = Shop.fromRow(r as Map);
+    if (goneShops.containsKey(s.uid)) continue;
     final here = mine[s.uid];
     final newer = here == null || (s.lastPull != null && (here.lastPull == null || s.lastPull!.isAfter(here.lastPull!)));
     if (!newer) continue;

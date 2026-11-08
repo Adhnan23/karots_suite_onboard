@@ -27,7 +27,7 @@ class Db {
     path ??= p.join((await getApplicationSupportDirectory()).path, 'onboard.db');
     final raw = await f.openDatabase(
       path,
-      options: OpenDatabaseOptions(version: 2, onCreate: (d, _) => _create(d), onUpgrade: _upgrade),
+      options: OpenDatabaseOptions(version: 3, onCreate: (d, _) => _create(d), onUpgrade: _upgrade),
     );
     return Db._(raw);
   }
@@ -52,14 +52,30 @@ class Db {
       'CREATE TABLE review(uid TEXT PRIMARY KEY, shop_uid TEXT, kind TEXT, key TEXT, json TEXT, status TEXT)',
       'CREATE INDEX review_key ON review(kind, key)',
       'CREATE TABLE pending(uid TEXT PRIMARY KEY, shop_uid TEXT, op TEXT, json TEXT, error TEXT, created_at TEXT)',
+      _deletedTable,
     ]) {
       await d.execute(s);
     }
   }
 
+  static const _deletedTable = 'CREATE TABLE deleted(kind TEXT NOT NULL, uid TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY(kind, uid))';
+
   static Future<void> _upgrade(Database d, int from, int to) async {
     if (from < 2) await d.execute('ALTER TABLE shops ADD COLUMN secret_name TEXT');
+    if (from < 3) await d.execute(_deletedTable);
   }
+
+  // ---- deletions, so they travel to the other devices ----
+
+  Future<void> _mark(DatabaseExecutor t, String kind, String uid, [DateTime? at]) =>
+      t.insert('deleted', {'kind': kind, 'uid': uid, 'at': (at ?? DateTime.now()).toIso8601String()}, conflictAlgorithm: ConflictAlgorithm.replace);
+
+  /// When each product / supplier / shop was deleted here, by uid.
+  Future<Map<String, DateTime>> deletedAt(String kind) async => {
+    for (final r in await raw.query('deleted', where: 'kind = ?', whereArgs: [kind])) r['uid'] as String: DateTime.parse(r['at'] as String),
+  };
+  Future<List<Map<String, Object?>>> deletions() => raw.query('deleted');
+  Future<void> markDeleted(String kind, String uid, DateTime at) => _mark(raw, kind, uid, at);
 
   // ---- catalogue products ----
 
@@ -86,6 +102,7 @@ class Db {
       await t.delete(tb, where: 'product_uid = ?', whereArgs: [uid]);
     }
     await t.delete('catalog_products', where: 'uid = ?', whereArgs: [uid]);
+    await _mark(t, 'product', uid);
   });
 
   Future<List<CatalogProduct>> products({String where = '1=1', List<Object?> args = const []}) async {
@@ -117,7 +134,10 @@ class Db {
   // ---- suppliers ----
 
   Future<void> saveSupplier(CatalogSupplier s) => raw.insert('catalog_suppliers', s.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
-  Future<void> deleteSupplier(String uid) => raw.delete('catalog_suppliers', where: 'uid = ?', whereArgs: [uid]);
+  Future<void> deleteSupplier(String uid) => raw.transaction((t) async {
+    await t.delete('catalog_suppliers', where: 'uid = ?', whereArgs: [uid]);
+    await _mark(t, 'supplier', uid);
+  });
   Future<List<CatalogSupplier>> suppliers() async => [
     for (final r in await raw.query('catalog_suppliers', orderBy: 'name COLLATE NOCASE')) CatalogSupplier.fromRow(r),
   ];
@@ -125,7 +145,11 @@ class Db {
   // ---- shops ----
 
   Future<void> saveShop(Shop s) => raw.insert('shops', s.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
-  Future<void> deleteShop(String uid) => raw.delete('shops', where: 'uid = ?', whereArgs: [uid]);
+  Future<void> deleteShop(String uid) => raw.transaction((t) async {
+    await t.delete('shops', where: 'uid = ?', whereArgs: [uid]);
+    await t.delete('shop_products', where: 'shop_uid = ?', whereArgs: [uid]);
+    await _mark(t, 'shop', uid);
+  });
   Future<List<Shop>> shops() async => [for (final r in await raw.query('shops', orderBy: 'name COLLATE NOCASE')) Shop.fromRow(r)];
 
   // ---- a shop's own list, from its last pull ----
