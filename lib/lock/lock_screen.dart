@@ -71,13 +71,11 @@ class _LockScreenState extends State<LockScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(color: c.brand, borderRadius: BorderRadius.circular(KsTokens.radius)),
-                  child: Icon(Icons.inventory_2_rounded, color: c.brandForeground),
-                ),
-                const SizedBox(height: 18),
+                ClipRRect(
+                borderRadius: BorderRadius.circular(KsTokens.radius),
+                child: Image.asset('assets/icon.png', width: 64, height: 64),
+              ),
+              const SizedBox(height: 18),
                 Text('Karots Suite Onboard', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
                 Text(

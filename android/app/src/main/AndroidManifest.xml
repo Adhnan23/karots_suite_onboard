@@ -2,7 +2,7 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <application android:usesCleartextTraffic="true"
-        android:label="karots_suite_onboard"
+        android:label="Karots Onboard"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
