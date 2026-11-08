@@ -106,4 +106,17 @@ void main() {
     expect(again.toReview, 0, reason: 'a second pull adds no duplicate review rows');
     expect((await db.reviews()).length, 2);
   });
+
+  test('an older shop (no packs call, no ids in its sheet) still pulls', () async {
+    shop.routes.remove('GET /api/v1/admin/products/packs');
+    shop.routes['GET /api/v1/admin/products/export'] = (_, _) =>
+        '${header.replaceFirst(',id', '')}A,,1,,Medicine,pcs,1,2,0,0,0,0,,false,0,\r\nB,,2,,Medicine,pcs,1,2,0,0,0,0,,false,0,\r\n';
+    final s = Shop(name: 'Old', address: shop.url);
+    await db.saveShop(s);
+    final r = await pull(db, SuiteClient(shop.url), s);
+    expect(r.toReview, 2);
+    final mine = await db.shopProducts(s.uid);
+    expect(mine.length, 2, reason: 'both kept, without ids');
+    expect(mine.every((x) => (x['remote_id'] as int) < 0), isTrue, reason: 'no id: not editable from here');
+  });
 }

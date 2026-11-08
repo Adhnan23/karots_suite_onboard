@@ -37,12 +37,20 @@ Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {void Function(String)?
 
   step?.call('Reading products');
   final rows = readProductSheet(await c.productsCsv(customFields: has('productplus')), labels);
-  final packs = await c.allPacks();
+  // An older shop (before 2026-11-08) has no packs call and no ids in its sheet: its
+  // products come without packs, and can't be changed from here until it updates.
+  var packs = <int, List<Map>>{};
+  try {
+    packs = await c.allPacks();
+  } on SuiteError catch (e) {
+    if (e.status != 404 && e.status != 400) rethrow;
+  }
   final match = await Matcher.load(db);
   final kinds = {if (shop.kind.isNotEmpty) shop.kind};
   var known = 0, review = 0;
   final mine = <Map<String, Object?>>[];
-  for (final r in rows) {
+  for (final (i, r) in rows.indexed) {
+    final remoteId = r.id > 0 ? r.id : -(i + 1);
     final p = r.product
       ..kinds = {...kinds}
       ..sources = {shop.uid}
@@ -71,7 +79,7 @@ Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {void Function(String)?
       review++;
     }
     mine.add({
-      'remote_id': r.id,
+      'remote_id': remoteId,
       'catalog_uid': hit?.uid,
       'name': p.name,
       'barcode': p.barcode,
