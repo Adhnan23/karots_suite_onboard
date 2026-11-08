@@ -28,6 +28,7 @@ class _OnboardAppState extends State<OnboardApp> {
 
   Future<void> unlock() async {
     app ??= AppState(await Db.open(), store, mode);
+    await app!.resumeTeam();
     setState(() => open = true);
   }
 

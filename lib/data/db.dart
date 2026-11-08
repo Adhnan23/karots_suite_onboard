@@ -34,6 +34,15 @@ class Db {
 
   Future<void> close() => raw.close();
 
+  /// Called after each change to the catalogue, suppliers or shops (the team sync listens).
+  void Function()? onWrite;
+
+  Future<T> _w<T>(Future<T> f) async {
+    final r = await f;
+    onWrite?.call();
+    return r;
+  }
+
   static Future<void> _create(Database d) async {
     for (final s in [
       '''CREATE TABLE catalog_products(uid TEXT PRIMARY KEY, name TEXT NOT NULL, name_local TEXT, barcode TEXT, category TEXT,
@@ -80,30 +89,34 @@ class Db {
   // ---- catalogue products ----
 
   /// Saves a product; touch: false keeps its own last-changed time (a backup import).
-  Future<void> saveProduct(CatalogProduct x, {bool touch = true}) => raw.transaction((t) async {
-    if (touch) x.updatedAt = DateTime.now();
-    await t.insert('catalog_products', x.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
-    for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
-      await t.delete(tb, where: 'product_uid = ?', whereArgs: [x.uid]);
-    }
-    for (final (i, c) in x.allCodes.indexed) {
-      await t.insert('catalog_barcodes', {'product_uid': x.uid, 'code': c, 'pos': i});
-    }
-    for (final (i, k) in x.packs.indexed) {
-      await t.insert('catalog_packs', {'product_uid': x.uid, ...k.toMap(), 'pos': i});
-    }
-    for (final e in x.fields.entries) {
-      await t.insert('catalog_fields', {'product_uid': x.uid, 'label': e.key, 'value': e.value});
-    }
-  });
+  Future<void> saveProduct(CatalogProduct x, {bool touch = true}) => _w(
+    raw.transaction((t) async {
+      if (touch) x.updatedAt = DateTime.now();
+      await t.insert('catalog_products', x.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
+      for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
+        await t.delete(tb, where: 'product_uid = ?', whereArgs: [x.uid]);
+      }
+      for (final (i, c) in x.allCodes.indexed) {
+        await t.insert('catalog_barcodes', {'product_uid': x.uid, 'code': c, 'pos': i});
+      }
+      for (final (i, k) in x.packs.indexed) {
+        await t.insert('catalog_packs', {'product_uid': x.uid, ...k.toMap(), 'pos': i});
+      }
+      for (final e in x.fields.entries) {
+        await t.insert('catalog_fields', {'product_uid': x.uid, 'label': e.key, 'value': e.value});
+      }
+    }),
+  );
 
-  Future<void> deleteProduct(String uid) => raw.transaction((t) async {
-    for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
-      await t.delete(tb, where: 'product_uid = ?', whereArgs: [uid]);
-    }
-    await t.delete('catalog_products', where: 'uid = ?', whereArgs: [uid]);
-    await _mark(t, 'product', uid);
-  });
+  Future<void> deleteProduct(String uid) => _w(
+    raw.transaction((t) async {
+      for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
+        await t.delete(tb, where: 'product_uid = ?', whereArgs: [uid]);
+      }
+      await t.delete('catalog_products', where: 'uid = ?', whereArgs: [uid]);
+      await _mark(t, 'product', uid);
+    }),
+  );
 
   Future<List<CatalogProduct>> products({String where = '1=1', List<Object?> args = const []}) async {
     final rows = await raw.query('catalog_products', where: where, whereArgs: args, orderBy: 'name COLLATE NOCASE');
@@ -133,37 +146,43 @@ class Db {
 
   // ---- suppliers ----
 
-  Future<void> saveSupplier(CatalogSupplier s) => raw.insert('catalog_suppliers', s.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
-  Future<void> deleteSupplier(String uid) => raw.transaction((t) async {
-    await t.delete('catalog_suppliers', where: 'uid = ?', whereArgs: [uid]);
-    await _mark(t, 'supplier', uid);
-  });
+  Future<void> saveSupplier(CatalogSupplier s) => _w(raw.insert('catalog_suppliers', s.toRow(), conflictAlgorithm: ConflictAlgorithm.replace));
+  Future<void> deleteSupplier(String uid) => _w(
+    raw.transaction((t) async {
+      await t.delete('catalog_suppliers', where: 'uid = ?', whereArgs: [uid]);
+      await _mark(t, 'supplier', uid);
+    }),
+  );
   Future<List<CatalogSupplier>> suppliers() async => [
     for (final r in await raw.query('catalog_suppliers', orderBy: 'name COLLATE NOCASE')) CatalogSupplier.fromRow(r),
   ];
 
   // ---- shops ----
 
-  Future<void> saveShop(Shop s) => raw.insert('shops', s.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
-  Future<void> deleteShop(String uid) => raw.transaction((t) async {
-    await t.delete('shops', where: 'uid = ?', whereArgs: [uid]);
-    await t.delete('shop_products', where: 'shop_uid = ?', whereArgs: [uid]);
-    await _mark(t, 'shop', uid);
-  });
+  Future<void> saveShop(Shop s) => _w(raw.insert('shops', s.toRow(), conflictAlgorithm: ConflictAlgorithm.replace));
+  Future<void> deleteShop(String uid) => _w(
+    raw.transaction((t) async {
+      await t.delete('shops', where: 'uid = ?', whereArgs: [uid]);
+      await t.delete('shop_products', where: 'shop_uid = ?', whereArgs: [uid]);
+      await _mark(t, 'shop', uid);
+    }),
+  );
   Future<List<Shop>> shops() async => [for (final r in await raw.query('shops', orderBy: 'name COLLATE NOCASE')) Shop.fromRow(r)];
 
   // ---- a shop's own list, from its last pull ----
 
-  Future<void> replaceShopProducts(String shopUid, List<Map<String, Object?>> rows) => raw.transaction((t) async {
-    await t.delete('shop_products', where: 'shop_uid = ?', whereArgs: [shopUid]);
-    for (final r in rows) {
-      await t.insert('shop_products', {...r, 'shop_uid': shopUid}, conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-  });
+  Future<void> replaceShopProducts(String shopUid, List<Map<String, Object?>> rows) => _w(
+    raw.transaction((t) async {
+      await t.delete('shop_products', where: 'shop_uid = ?', whereArgs: [shopUid]);
+      for (final r in rows) {
+        await t.insert('shop_products', {...r, 'shop_uid': shopUid}, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    }),
+  );
 
   /// One product in the shop's list, after a push (so it shows before the next pull).
   Future<void> putShopProduct(String shopUid, Map<String, Object?> row) =>
-      raw.insert('shop_products', {...row, 'shop_uid': shopUid}, conflictAlgorithm: ConflictAlgorithm.replace);
+      _w(raw.insert('shop_products', {...row, 'shop_uid': shopUid}, conflictAlgorithm: ConflictAlgorithm.replace));
 
   Future<List<Map<String, Object?>>> shopProducts(String shopUid) =>
       raw.query('shop_products', where: 'shop_uid = ?', whereArgs: [shopUid], orderBy: 'name COLLATE NOCASE');

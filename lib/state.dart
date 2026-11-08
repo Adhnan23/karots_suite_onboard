@@ -6,11 +6,14 @@ import 'settings/secrets.dart';
 import 'settings/secure.dart';
 import 'suite/client.dart';
 import 'sync/auto_pull.dart';
+import 'sync/team.dart';
 import 'sync/pull.dart';
 import 'theme/mode.dart';
 
 /// What every screen reaches: the database, the secret store, and the signed-in
 /// session per shop.
+const teamKeyName = 'team_key', deviceIdName = 'device_id';
+
 class AppState extends ChangeNotifier {
   AppState(this.db, this.store, [ModeController? mode]) : mode = mode ?? ModeController(store);
   final Db db;
@@ -19,6 +22,43 @@ class AppState extends ChangeNotifier {
   /// Light, dark or the device's; the page heads carry the switch.
   final ModeController mode;
   final _sessions = <String, SuiteClient>{};
+
+  /// The team sync, while this device is in a team (null otherwise).
+  TeamSync? team;
+
+  /// Joins or makes a team with this key (null leaves it) and starts syncing.
+  Future<void> setTeam(String? key) async {
+    await team?.stop();
+    team = null;
+    if (key == null || key.trim().isEmpty) {
+      await store.write(teamKeyName, '');
+    } else {
+      await store.write(teamKeyName, key.trim().toUpperCase());
+      var device = await store.read(deviceIdName) ?? '';
+      if (device.isEmpty) {
+        device = newUid();
+        await store.write(deviceIdName, device);
+      }
+      final t = TeamSync(db, key: key, device: device)..addListener(notifyListeners);
+      await t.start();
+      team = t;
+      db.onWrite = t.soon;
+    }
+    notifyListeners();
+  }
+
+  /// At unlock: back in the team this device was in.
+  Future<void> resumeTeam() async {
+    final key = await store.read(teamKeyName) ?? '';
+    if (key.isNotEmpty) {
+      try {
+        await setTeam(key);
+      } catch (_) {
+        // the port may be taken; the Team page shows it isn't running
+      }
+    }
+  }
+
   final _pullers = <String, AutoPuller>{};
 
   /// The shop's background pull while connected (null when not connected).

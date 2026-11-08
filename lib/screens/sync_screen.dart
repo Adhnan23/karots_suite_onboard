@@ -27,7 +27,7 @@ class _SyncHostScreenState extends State<SyncHostScreen> {
     final db = app!.db;
     () async {
       try {
-        final h = await SyncHost.start(db);
+        final h = await SyncHost.start(db, port: 8767); // the team's sync keeps 8765
         final a = await SyncHost.addresses();
         if (!mounted) {
           await h.stop();

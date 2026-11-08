@@ -12,6 +12,7 @@ import '../state.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
 import 'sync_screen.dart';
+import 'team_screen.dart';
 
 /// Export the app's data to a file, or merge one in (another device's, or a backup).
 Future<void> showBackup(BuildContext context) => showModalBottomSheet(
@@ -34,6 +35,15 @@ Future<void> showBackup(BuildContext context) => showModalBottomSheet(
             style: TextStyle(color: c.mutedForeground),
           ),
           const SizedBox(height: 16),
+          FilledButton.tonalIcon(
+            icon: const Icon(Icons.groups_rounded),
+            label: const Text('Team: keep my devices the same'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const TeamScreen()));
+            },
+          ),
+          const SizedBox(height: 10),
           OutlinedButton.icon(
             icon: const Icon(Icons.wifi_tethering_rounded),
             label: const Text('Let another device sync'),
