@@ -130,7 +130,10 @@ class _TeamScreenState extends State<TeamScreen> {
                   for (final p in t?.peers ?? <Peer>[])
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: Icon(p.error.isEmpty ? Icons.devices_rounded : Icons.sync_problem_rounded, color: p.error.isEmpty ? c.success : c.danger),
+                      leading: Icon(
+                        p.error.isEmpty ? Icons.devices_rounded : Icons.sync_problem_rounded,
+                        color: p.error.isEmpty ? c.success : c.danger,
+                      ),
                       title: Text(p.address),
                       subtitle: Text(
                         p.error.isNotEmpty
@@ -149,7 +152,11 @@ class _TeamScreenState extends State<TeamScreen> {
                           icon: const Icon(Icons.sync_rounded),
                           label: Text(t.syncing ? 'Syncing…' : 'Sync now'),
                         ),
-                        OutlinedButton.icon(onPressed: () => addByAddress(t), icon: const Icon(Icons.add_rounded), label: const Text('Add by address')),
+                        OutlinedButton.icon(
+                          onPressed: () => addByAddress(t),
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('Add by address'),
+                        ),
                       ],
                     ),
                 ],

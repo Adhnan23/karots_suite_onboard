@@ -22,7 +22,8 @@ class _Row {
       wholesale = k.wholesale;
   final TextEditingController name, size, selling, barcode;
   final String wholesale;
-  Pack read() => Pack(name: name.text.trim(), size: size.text.trim(), selling: selling.text.trim(), wholesale: wholesale, barcode: barcode.text.trim());
+  Pack read() =>
+      Pack(name: name.text.trim(), size: size.text.trim(), selling: selling.text.trim(), wholesale: wholesale, barcode: barcode.text.trim());
 }
 
 class PacksEditorState extends State<PacksEditor> {

@@ -171,7 +171,10 @@ class _SecretsScreenState extends State<SecretsScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
           children: [
-            Text('A shop opens with the secret it was built with. The first one is used when a shop picks none.', style: TextStyle(color: c.mutedForeground)),
+            Text(
+              'A shop opens with the secret it was built with. The first one is used when a shop picks none.',
+              style: TextStyle(color: c.mutedForeground),
+            ),
             const SizedBox(height: 12),
             for (final (i, x) in list.indexed)
               Padding(

@@ -97,7 +97,11 @@ class _DupesScreenState extends State<DupesScreen> {
         children: [
           Text(x.name, style: const TextStyle(fontWeight: FontWeight.w700)),
           Text(
-            [x.category, if (x.allCodes.isNotEmpty) x.allCodes.join(', '), if (x.selling.isNotEmpty) 'Rs ${x.selling}'].where((s) => s.isNotEmpty).join(' · '),
+            [
+              x.category,
+              if (x.allCodes.isNotEmpty) x.allCodes.join(', '),
+              if (x.selling.isNotEmpty) 'Rs ${x.selling}',
+            ].where((s) => s.isNotEmpty).join(' · '),
             style: TextStyle(color: c.mutedForeground, fontSize: 13),
           ),
           const SizedBox(height: 6),
@@ -141,7 +145,10 @@ class _DupesScreenState extends State<DupesScreen> {
                           child: Section(
                             title: p.why,
                             children: [
-                              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [side(p, p.a, p.b), const SizedBox(width: 12), side(p, p.b, p.a)]),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [side(p, p.a, p.b), const SizedBox(width: 12), side(p, p.b, p.a)],
+                              ),
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: TextButton(
