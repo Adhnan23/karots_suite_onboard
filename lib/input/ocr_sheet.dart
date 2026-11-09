@@ -114,9 +114,7 @@ class _PickState extends State<_Pick> {
                       ? null
                       : () => Navigator.pop(
                           context,
-                          filterFor(widget.kind, value.text).isEmpty && widget.kind != FieldKind.text
-                              ? value.text.trim()
-                              : filterFor(widget.kind, value.text),
+                          filterFor(widget.kind, value.text).isEmpty && widget.kind != FieldKind.text ? value.text.trim() : filterFor(widget.kind, value.text),
                         ),
                   icon: const Icon(Icons.check_rounded),
                   label: Text('Use for ${widget.label}'),

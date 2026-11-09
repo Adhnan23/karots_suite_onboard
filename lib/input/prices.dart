@@ -3,21 +3,28 @@ import 'cost_code.dart';
 /// What's typed in the price boxes: cost (digits, or the shop's code letters),
 /// selling, Markup × and ÷ how many (per; blank = no dividing). markupTyped: the
 /// markup was typed last (not the selling price), so a new cost moves the selling price.
+/// costWorkedOut: nobody typed the cost; it is selling ÷ markup and follows them.
 class PriceInput {
-  const PriceInput({this.cost = '', this.selling = '', this.markup = '', this.per = '', this.markupTyped = false});
+  const PriceInput({this.cost = '', this.selling = '', this.markup = '', this.per = '', this.markupTyped = false, this.costWorkedOut = false});
   final String cost, selling, markup, per;
-  final bool markupTyped;
+  final bool markupTyped, costWorkedOut;
 
-  PriceInput copyWith({String? cost, String? selling, String? markup, String? per, bool? markupTyped}) => PriceInput(
+  PriceInput copyWith({String? cost, String? selling, String? markup, String? per, bool? markupTyped, bool? costWorkedOut}) => PriceInput(
     cost: cost ?? this.cost,
     selling: selling ?? this.selling,
     markup: markup ?? this.markup,
     per: per ?? this.per,
     markupTyped: markupTyped ?? this.markupTyped,
+    costWorkedOut: costWorkedOut ?? this.costWorkedOut,
   );
 }
 
-double _num(String s) => double.tryParse(s.trim()) ?? 0;
+const howManyError = 'How many must be a number above 0';
+
+/// A typed amount without its thousands commas and spaces ("1,250" → "1250").
+String plain(String s) => s.replaceAll(RegExp(r'[,\s]'), '');
+
+double _num(String s) => double.tryParse(plain(s)) ?? 0;
 
 /// v to at most [places] decimals, trailing zeros dropped (23, 33.3333, 12.5).
 String trimDec(double v, int places) {
@@ -37,30 +44,36 @@ String _costNumber(String typed, CostCode? code) => code == null ? typed : code.
 /// a price nobody asked to change. The typed cost is never rewritten.
 PriceInput editPrice(PriceInput p, String field, String value, CostCode? code) {
   if (field == 'per') return p.copyWith(per: value);
+  // No cost typed: markup and selling work it out (selling ÷ markup), in either order.
+  if (field != 'cost' && (p.cost.trim().isEmpty || p.costWorkedOut) && (field == 'markup' || p.markupTyped)) {
+    final next = field == 'markup' ? p.copyWith(markup: value, markupTyped: true) : p.copyWith(selling: value);
+    final m = _num(next.markup), sell = _num(next.selling);
+    return next.copyWith(cost: m > 0 && sell > 0 ? trimDec(sell / m, 2) : '', costWorkedOut: true);
+  }
   final next = switch (field) {
-    'cost' => p.copyWith(cost: value),
+    'cost' => p.copyWith(cost: value, costWorkedOut: false),
     'markup' => p.copyWith(markup: value, markupTyped: true),
     _ => p.copyWith(selling: value, markupTyped: false),
   };
   final cost = _costNumber(next.cost, code);
   if (field == 'selling') return next.copyWith(markup: markupOf(cost, value));
   if (next.markupTyped && _num(cost) > 0 && _num(next.markup) > 0) return next.copyWith(selling: trimDec(_num(cost) * _num(next.markup), 2));
-  return field == 'cost' ? next.copyWith(markup: markupOf(cost, next.selling)) : next;
+  return field == 'cost' && !next.markupTyped ? next.copyWith(markup: markupOf(cost, next.selling)) : next; // a typed markup stays
 }
 
 /// What gets saved: the decoded cost, both prices ÷ how many (to 2 places) when a count is given.
 ({String cost, String selling, String? error}) resolve(PriceInput p, CostCode? code) {
-  var cost = p.cost.trim();
+  var cost = plain(p.cost);
   if (code != null) {
     final d = code.decode(cost);
     if (d.error != null) return (cost: '', selling: '', error: d.error);
     cost = d.value;
   }
-  final selling = p.selling.trim();
-  final per = p.per.trim();
+  final selling = plain(p.selling);
+  final per = plain(p.per);
   if (per.isEmpty) return (cost: cost, selling: selling, error: null);
   final n = double.tryParse(per);
-  if (n == null) return (cost: '', selling: '', error: 'How many must be a number');
+  if (n == null || !n.isFinite || n < 0) return (cost: '', selling: '', error: howManyError);
   if (n == 0) return (cost: cost, selling: selling, error: null);
   String div(String v, int places) => v.isEmpty ? '' : trimDec(_num(v) / n, places);
   return (cost: div(cost, 2), selling: div(selling, 2), error: null);

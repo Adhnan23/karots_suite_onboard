@@ -41,7 +41,10 @@ class _CostFieldState extends State<CostField> {
     if (c != null && c.hasLetters(v)) {
       final d = c.decode(v);
       if (d.error == null) {
-        widget.controller.value = TextEditingValue(text: d.value, selection: TextSelection.collapsed(offset: d.value.length));
+        widget.controller.value = TextEditingValue(
+          text: d.value,
+          selection: TextSelection.collapsed(offset: d.value.length),
+        );
         v = d.value;
       }
     }
@@ -92,9 +95,10 @@ class PriceFieldsState extends State<PriceFields> {
   late final selling = TextEditingController(text: widget.selling);
   late final markup = TextEditingController(text: markupOf(widget.code == null ? widget.cost : widget.code!.decode(widget.cost).value, widget.selling));
   final per = TextEditingController();
-  var _markupTyped = false;
+  var _markupTyped = false, _costWorkedOut = false;
 
-  PriceInput get _input => PriceInput(cost: cost.text, selling: selling.text, markup: markup.text, per: per.text, markupTyped: _markupTyped);
+  PriceInput get _input =>
+      PriceInput(cost: cost.text, selling: selling.text, markup: markup.text, per: per.text, markupTyped: _markupTyped, costWorkedOut: _costWorkedOut);
 
   /// Exactly what's in the cost and selling boxes (letters kept), for a kept draft.
   ({String cost, String selling}) get typed => (cost: cost.text.trim(), selling: selling.text.trim());
@@ -105,6 +109,8 @@ class PriceFieldsState extends State<PriceFields> {
   void _edit(String field, String value) {
     final next = editPrice(_input, field, value, widget.code);
     _markupTyped = next.markupTyped;
+    _costWorkedOut = next.costWorkedOut;
+    if (field != 'cost' && cost.text != next.cost) cost.text = next.cost;
     if (field != 'selling' && selling.text != next.selling) selling.text = next.selling;
     if (field != 'markup' && markup.text != next.markup) markup.text = next.markup;
     setState(() {});
@@ -130,7 +136,7 @@ class PriceFieldsState extends State<PriceFields> {
   @override
   Widget build(BuildContext context) {
     final r = read();
-    final each = per.text.trim().isNotEmpty && (double.tryParse(per.text.trim()) ?? 0) != 0 && r.error == null;
+    final each = per.text.trim().isNotEmpty && (double.tryParse(plain(per.text)) ?? 0) != 0 && r.error == null;
     return Column(
       children: [
         _pair(
@@ -157,7 +163,7 @@ class PriceFieldsState extends State<PriceFields> {
             controller: per,
             kind: FieldKind.number,
             helper: 'optional',
-            errorText: r.error == 'How many must be a number' ? r.error : null,
+            errorText: r.error == howManyError ? r.error : null,
             onChanged: (v) => _edit('per', v),
           ),
         ),

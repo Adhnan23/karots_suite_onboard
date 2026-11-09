@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:karots_suite_onboard/data/models.dart';
 import 'package:karots_suite_onboard/input/price_fields.dart';
+import 'package:karots_suite_onboard/input/prices.dart' show howManyError;
 import 'package:karots_suite_onboard/screens/product_form.dart';
 import 'package:karots_suite_onboard/theme/app_theme.dart';
 
@@ -29,8 +30,11 @@ void main() {
     expect(text(t, 'Cost price'), '230');
     expect(find.text('ESX'), findsOneWidget, reason: 'the letters typed show under the number, to check them');
     final f = t.widget<TextField>(box('Cost price'));
-    expect((f.enableSuggestions, f.autocorrect, f.keyboardType), (false, false, TextInputType.visiblePassword),
-        reason: 'no keyboard word-building, or its suggestions show the letters mixed up');
+    expect(
+      (f.enableSuggestions, f.autocorrect, f.keyboardType),
+      (false, false, TextInputType.visiblePassword),
+      reason: 'no keyboard word-building, or its suggestions show the letters mixed up',
+    );
     await t.enterText(box('Cost price'), 'ESQ');
     await t.pumpAndSettle();
     expect(find.text("'q' isn't in this shop's code"), findsOneWidget);
@@ -106,13 +110,17 @@ void main() {
     await t.pumpWidget(
       host(
         SingleChildScrollView(
-          child: ProductForm(key: key, product: CatalogProduct(name: 'Panadol', cost: '9.50', selling: '12'), costCode: example),
+          child: ProductForm(
+            key: key,
+            product: CatalogProduct(name: 'Panadol', cost: '9.50', selling: '12'),
+            costCode: example,
+          ),
         ),
       ),
     );
     await t.enterText(box('÷ how many'), '1.2.3');
     await t.pumpAndSettle();
-    expect(key.currentState!.problem(), 'How many must be a number');
+    expect(key.currentState!.problem(), howManyError);
     final p = key.currentState!.read();
     expect((p.cost, p.selling), ('9.50', '12'));
     await t.enterText(box('Cost price'), 'ESQ');
@@ -136,5 +144,21 @@ void main() {
     await t.pumpAndSettle();
     expect((text(t, 'Cost price'), find.text('ERS').evaluate().length), ('213', 1));
     await t.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('markup then selling fills the cost box (selling ÷ markup)', (t) async {
+    final key = GlobalKey<PriceFieldsState>();
+    await t.pumpWidget(
+      host(
+        SingleChildScrollView(
+          child: PriceFields(key: key, cost: '', selling: ''),
+        ),
+      ),
+    );
+    await t.enterText(box('Markup ×'), '1.25');
+    await t.enterText(box('Selling price'), '250');
+    await t.pumpAndSettle();
+    expect(key.currentState!.cost.text, '200');
+    expect(key.currentState!.read().cost, '200');
   });
 }

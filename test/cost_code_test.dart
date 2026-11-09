@@ -43,4 +43,19 @@ void main() {
     expect(CostCode({0: 'i5'}).problem(), "0 has '5': use letters only");
     expect(CostCode({0: 'i.'}).problem(), "0 has '.': use letters only");
   });
+
+  test('any script\'s letters count as code letters', () {
+    final c = CostCode({1: 'ක', 2: 'அ'});
+    expect(c.hasLetters('කඅ'), isTrue);
+    expect(c.hasLetters('12.5'), isFalse);
+    expect(c.decode('කඅ').error, "'අ' isn't in this shop's code");
+    expect(c.decode('කඅ'.replaceAll('අ', 'அ')).value, '12');
+  });
+
+  test('a broken code from sync reads as no code, never a crash', () {
+    for (final bad in ['{', '[1,2]', '{"x":"ab"}', 'null', '{"1":5}']) {
+      expect(() => CostCode.fromJson(bad), returnsNormally, reason: bad);
+    }
+    expect(CostCode.fromJson('{').isEmpty, isTrue);
+  });
 }

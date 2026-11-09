@@ -17,9 +17,12 @@ class CostCode {
   final Map<int, String> letters;
 
   factory CostCode.fromJson(String s) {
-    if (s.trim().isEmpty) return CostCode({});
-    final m = jsonDecode(s) as Map;
-    return CostCode({for (final e in m.entries) int.parse('${e.key}'): '${e.value}'});
+    try {
+      final m = jsonDecode(s) as Map;
+      return CostCode({for (final e in m.entries) int.parse('${e.key}'): '${e.value}'});
+    } catch (_) {
+      return CostCode({}); // a broken copy (sync, an old backup) reads as no code, never a crash
+    }
   }
 
   String toJson() => jsonEncode({for (final e in letters.entries) '${e.key}': e.value});
@@ -40,7 +43,8 @@ class CostCode {
     return null;
   }
 
-  bool hasLetters(String typed) => RegExp('[A-Za-z]').hasMatch(typed);
+  /// Any letter, in any script (Sinhala, Tamil…): whatever isn't a digit, point, comma or space.
+  bool hasLetters(String typed) => RegExp(r'[^0-9.,\s]').hasMatch(typed);
 
   /// The digits for what was typed; an unknown letter is an error naming it.
   ({String value, String? error}) decode(String typed) {
@@ -49,7 +53,7 @@ class CostCode {
         for (final ch in e.value.split('')) ch: e.key,
     };
     final out = StringBuffer();
-    for (final ch in typed.trim().toLowerCase().split('')) {
+    for (final ch in typed.replaceAll(RegExp(r'[,\s]'), '').toLowerCase().runes.map(String.fromCharCode)) {
       if (ch.isEmpty) continue;
       if (RegExp(r'[0-9.]').hasMatch(ch)) {
         out.write(ch);
