@@ -23,7 +23,11 @@ class KsField extends StatelessWidget {
     this.autofocus = false,
     this.errorText,
     this.keyboard,
+    this.suggestions = true,
   });
+
+  /// false: no keyboard suggestions or autocorrect (a box whose text the app rewrites).
+  final bool suggestions;
   final String? errorText;
 
   /// Overrides the keyboard [kind] picks (a coded cost takes letters).
@@ -48,6 +52,8 @@ class KsField extends StatelessWidget {
       onSubmitted: onSubmitted,
       focusNode: focusNode,
       autofocus: autofocus,
+      enableSuggestions: suggestions,
+      autocorrect: suggestions,
       keyboardType:
           keyboard ??
           switch (kind) {

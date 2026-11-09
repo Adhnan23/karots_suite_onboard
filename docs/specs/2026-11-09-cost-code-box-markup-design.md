@@ -20,8 +20,9 @@ Some big shops write the cost on their goods as letters so customers can't read 
   letter means exactly one digit; the same letter on two digits is refused when saving the code.
 - Letters are matched ignoring case.
 - **Every cost field at that shop** accepts letters: Quick add, the product's Prices (cost price), stock batches and
-  lots (cost). While letters are typed, the decoded number shows under/next to the field (e.g. "ESX" → **230**), so the
-  user sees it's right before saving. What is saved and sent to the Suite is the number, never the letters.
+  lots (cost). Each letter turns into its digit as it is typed, so the box shows the number (**230**) and the letters
+  typed ("ESX") show under it to check against the goods (user, 2026-11-09). Keyboard suggestions are off in
+  a coded cost box. What is saved and sent to the Suite is the number, never the letters.
 - A letter that isn't in the code shows a plain error on the field ("'q' isn't in this shop's code") and blocks Save
   of that field's value until fixed.
 - A decimal point may be typed as-is (e.g. "ES.X" → 23.0); shops' codes don't cover the point.
@@ -49,8 +50,8 @@ Medicines and other boxed goods show the price for the box, not for one piece. T
   changes it.
 - Only in Quick add and the product's Prices section (my call); stock batch / lot fields keep plain cost and price
   boxes (the cost code still works in their cost boxes in Onboard).
-- Rounding (my call, matching the Suite's 4-decimal unit costs, migration 00030): per-piece **cost keeps 4 decimals**
-  (100 ÷ 3 → 33.3333), **selling rounds to 2**.
+- Rounding (my call, matching the Suite's 4-decimal unit costs, migration 00030): per-piece **cost and selling round to 2 decimals**
+  (100 ÷ 3 → 33.33; user, 2026-11-09).
 
 ## 3. Markup — both apps
 

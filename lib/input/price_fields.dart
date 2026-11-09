@@ -6,30 +6,72 @@ import 'ks_field.dart';
 import 'prices.dart';
 
 /// A cost box: digits, or the shop's code letters when it has one (Onboard
-/// only), with the number it reads shown under it. [helper] replaces that line.
-class CostField extends StatelessWidget {
+/// only). Each letter turns into its digit as it is typed, so the box shows the
+/// number, and the letters typed show under it to check against the goods. A
+/// letter not in the code stays, with the error under it.
+class CostField extends StatefulWidget {
   const CostField({super.key, required this.label, required this.controller, this.code, this.helper, this.onChanged});
   final String label;
   final TextEditingController controller;
   final CostCode? code;
   final String? helper;
   final ValueChanged<String>? onChanged;
+  @override
+  State<CostField> createState() => _CostFieldState();
+}
+
+class _CostFieldState extends State<CostField> {
+  /// What was typed, one character for each in the box (letters kept).
+  late String typed = widget.controller.text;
+  late String _last = widget.controller.text;
+
+  void _changed(String v) {
+    // carry the typed characters across the edit: same start, same end, the middle is new
+    var p = 0;
+    while (p < v.length && p < _last.length && v[p] == _last[p]) {
+      p++;
+    }
+    var q = 0;
+    while (q < v.length - p && q < _last.length - p && v[v.length - 1 - q] == _last[_last.length - 1 - q]) {
+      q++;
+    }
+    final keep = typed.length == _last.length ? typed : _last;
+    typed = keep.substring(0, p) + v.substring(p, v.length - q) + keep.substring(keep.length - q);
+    final c = widget.code;
+    if (c != null && c.hasLetters(v)) {
+      final d = c.decode(v);
+      if (d.error == null) {
+        widget.controller.value = TextEditingValue(text: d.value, selection: TextSelection.collapsed(offset: d.value.length));
+        v = d.value;
+      }
+    }
+    _last = widget.controller.text;
+    setState(() {});
+    widget.onChanged?.call(v);
+  }
+
+  /// The letters typed (to check against the goods), then any line the caller adds.
+  String? _helper(CostCode? c) {
+    final h = [if (c != null && c.hasLetters(typed)) typed.toUpperCase(), ?widget.helper].join('  ');
+    return h.isEmpty ? null : h;
+  }
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: controller,
+    valueListenable: widget.controller,
     builder: (context, v, _) {
-      final c = code;
-      final coded = c != null && c.hasLetters(v.text);
-      final d = coded ? c.decode(v.text) : null;
+      final c = widget.code;
+      if (v.text != _last) typed = _last = v.text; // set from outside (a photo read, a restored draft)
+      final error = c != null && c.hasLetters(v.text) ? c.decode(v.text).error : null;
       return KsField(
-        label: label,
-        controller: controller,
+        label: widget.label,
+        controller: widget.controller,
         kind: c == null ? FieldKind.number : FieldKind.text,
-        keyboard: c == null ? null : TextInputType.text,
-        onChanged: onChanged,
-        errorText: d?.error,
-        helper: helper ?? (d != null && d.error == null ? '= ${d.value}' : null),
+        keyboard: c == null ? null : TextInputType.visiblePassword,
+        suggestions: c == null,
+        onChanged: _changed,
+        errorText: error,
+        helper: _helper(c),
       );
     },
   );

@@ -26,11 +26,11 @@ void main() {
     expect(p.selling, '264.5');
   });
 
-  test('÷ how many divides cost (4 places) and selling (2 places)', () {
+  test('÷ how many divides cost and selling to 2 places', () {
     var r = resolve(const PriceInput(cost: 'ESX', selling: '300', per: '10'), example);
     expect((r.cost, r.selling, r.error), ('23', '30', null));
     r = resolve(const PriceInput(cost: '100', selling: '150', per: '3'), null);
-    expect((r.cost, r.selling), ('33.3333', '50'));
+    expect((r.cost, r.selling), ('33.33', '50'));
     r = resolve(const PriceInput(cost: '100', selling: '100', per: '3'), null);
     expect(r.selling, '33.33');
   });

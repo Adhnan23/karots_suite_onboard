@@ -48,7 +48,7 @@ PriceInput editPrice(PriceInput p, String field, String value, CostCode? code) {
   return field == 'cost' ? next.copyWith(markup: markupOf(cost, next.selling)) : next;
 }
 
-/// What gets saved: the decoded cost, both prices ÷ how many when a count is given.
+/// What gets saved: the decoded cost, both prices ÷ how many (to 2 places) when a count is given.
 ({String cost, String selling, String? error}) resolve(PriceInput p, CostCode? code) {
   var cost = p.cost.trim();
   if (code != null) {
@@ -63,5 +63,5 @@ PriceInput editPrice(PriceInput p, String field, String value, CostCode? code) {
   if (n == null) return (cost: '', selling: '', error: 'How many must be a number');
   if (n == 0) return (cost: cost, selling: selling, error: null);
   String div(String v, int places) => v.isEmpty ? '' : trimDec(_num(v) / n, places);
-  return (cost: div(cost, 4), selling: div(selling, 2), error: null);
+  return (cost: div(cost, 2), selling: div(selling, 2), error: null);
 }

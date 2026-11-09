@@ -21,9 +21,16 @@ void main() {
   testWidgets('a coded cost shows its number; a wrong letter shows the error', (t) async {
     final key = GlobalKey<PriceFieldsState>();
     await t.pumpWidget(host(PriceFields(key: key, cost: '', selling: '', code: example)));
-    await t.enterText(box('Cost price'), 'ESX');
+    await t.enterText(box('Cost price'), 'E');
     await t.pumpAndSettle();
-    expect(find.text('= 230'), findsOneWidget);
+    expect(text(t, 'Cost price'), '2', reason: 'a letter turns into its digit as it is typed');
+    await t.enterText(box('Cost price'), '2SX');
+    await t.pumpAndSettle();
+    expect(text(t, 'Cost price'), '230');
+    expect(find.text('ESX'), findsOneWidget, reason: 'the letters typed show under the number, to check them');
+    final f = t.widget<TextField>(box('Cost price'));
+    expect((f.enableSuggestions, f.autocorrect, f.keyboardType), (false, false, TextInputType.visiblePassword),
+        reason: 'no keyboard word-building, or its suggestions show the letters mixed up');
     await t.enterText(box('Cost price'), 'ESQ');
     await t.pumpAndSettle();
     expect(find.text("'q' isn't in this shop's code"), findsOneWidget);
@@ -47,7 +54,7 @@ void main() {
     await t.pumpAndSettle();
     final r = key.currentState!.read();
     expect((r.cost, r.selling, r.error), ('23', '30', null));
-    expect(find.text('= 23 each'), findsOneWidget);
+    expect(find.text('ESX  = 23 each'), findsOneWidget, reason: 'the letters stay visible with the price of one');
     expect(find.text('= 30 each'), findsOneWidget);
   });
 
@@ -113,5 +120,21 @@ void main() {
     await t.pumpAndSettle();
     final d = key.currentState!.readDraft();
     expect((d.cost, d.selling), ('ESQ', '30'));
+  });
+
+  testWidgets('the letters under the box follow a backspace and a fix in the middle', (t) async {
+    await t.pumpWidget(host(PriceFields(cost: '', selling: '', code: example)));
+    for (final step in ['E', '2S', '23X']) {
+      await t.enterText(box('Cost price'), step);
+      await t.pumpAndSettle();
+    }
+    expect((text(t, 'Cost price'), find.text('ESX').evaluate().length), ('230', 1));
+    await t.enterText(box('Cost price'), '23'); // backspace
+    await t.pumpAndSettle();
+    expect(find.text('ES'), findsOneWidget);
+    await t.enterText(box('Cost price'), '2R3'); // 'r' typed in the middle
+    await t.pumpAndSettle();
+    expect((text(t, 'Cost price'), find.text('ERS').evaluate().length), ('213', 1));
+    await t.pump(const Duration(seconds: 1));
   });
 }

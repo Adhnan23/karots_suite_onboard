@@ -52,10 +52,11 @@ The app carries only its ID's seed (`lib/lock/app_identity.dart`), never the sec
 - **Markup ×** (Onboard and Shelf): cost × markup = selling price; type the selling price and the
   markup follows (the same rules as the Suite's product form). Nothing about it is saved.
 - **÷ how many** (Onboard and Shelf, optional): a box's printed cost and price ÷ the pieces in it
-  give one piece's (cost to 4 decimals, price to 2). Quantity is never touched and no Pack is made.
+  give one piece's (both to 2 decimals). Quantity is never touched and no Pack is made.
 - **Cost code** (Onboard only): some shops write costs as letters (0 = i or x, 1 = r …). Fill the
   shop's cheat sheet in once under **Edit shop → Cost code**; every cost box at that shop then takes
-  the letters and shows the number (`ESX` → 230). Only the number is saved. The code travels with
+  the letters: each one turns into its digit as it's typed, so the box shows `230` and the
+  letters typed (`ESX`) show under it to check against the goods. Only the number is saved. The code travels with
   team sync and backups; Shelf never sees it.
 
 ## Team, backup and sync
