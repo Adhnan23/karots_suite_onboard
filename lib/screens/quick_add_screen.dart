@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../data/models.dart';
-import '../input/field_kind.dart';
-import '../input/price_fields.dart';
 import '../input/cost_code.dart';
+import '../input/field_kind.dart';
 import '../input/ks_field.dart';
+import '../input/price_fields.dart';
 import '../state.dart';
 import '../sync/push.dart';
 import '../sync/quick.dart';

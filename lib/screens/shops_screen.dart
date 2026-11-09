@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/models.dart';
+import '../flavor.dart';
+import '../input/cost_code.dart';
 import '../settings/secrets.dart';
 import '../state.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
 import 'backup_sheet.dart';
+import 'cost_code_sheet.dart';
 import 'secrets_screen.dart';
 import 'shop_screen.dart';
 
@@ -117,6 +120,8 @@ Future<Shop?> editShop(BuildContext context, Shop? s) async {
   final name = TextEditingController(text: s?.name ?? '');
   final address = TextEditingController(text: s?.address ?? 'http://');
   var kind = s?.kind ?? shopKinds.first;
+  var code = s?.costCode ?? CostCode({});
+  var codeChanged = false;
   return showModalBottomSheet<Shop>(
     context: context,
     isScrollControlled: true,
@@ -155,6 +160,20 @@ Future<Shop?> editShop(BuildContext context, Shop? s) async {
                 onChanged: (v) => set(() => secretName = v ?? ''),
               ),
             ],
+            if (!isShelf) ...[
+              const SizedBox(height: 4),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.password_rounded),
+                title: const Text('Cost code'),
+                subtitle: Text(code.isEmpty ? 'None: costs are written as numbers' : [for (final e in code.letters.entries) '${e.key} ${e.value}'].join(' · ')),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () async {
+                  final got = await editCostCode(ctx, code);
+                  if (got != null) set(() => (code, codeChanged) = (got, true));
+                },
+              ),
+            ],
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () async {
@@ -164,8 +183,12 @@ Future<Shop?> editShop(BuildContext context, Shop? s) async {
                   ..name = name.text.trim()
                   ..kind = kind
                   ..address = address.text.trim()
-                  ..secretName = secretName
                   ..secretName = secretName;
+                if (codeChanged) {
+                  shop
+                    ..costCodeJson = code.isEmpty ? '' : code.toJson()
+                    ..costCodeAt = DateTime.now();
+                }
                 await app.db.saveShop(shop);
                 if (ctx.mounted) Navigator.pop(ctx, shop);
               },

@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import '../input/cost_code.dart';
-
 import 'package:uuid/uuid.dart';
+
+import '../input/cost_code.dart';
 
 const _uuid = Uuid();
 String newUid() => _uuid.v4();
