@@ -89,7 +89,23 @@ Future<ImportResult> importBackup(Db db, String text) async {
     if (goneShops.containsKey(s.uid)) continue;
     final here = mine[s.uid];
     final newer = here == null || (s.lastPull != null && (here.lastPull == null || s.lastPull!.isAfter(here.lastPull!)));
-    if (!newer) continue;
+    final newerCode = here != null && s.costCodeAt != null && (here.costCodeAt == null || s.costCodeAt!.isAfter(here.costCodeAt!));
+    if (!newer) {
+      if (newerCode) {
+        await db.saveShop(
+          here
+            ..costCodeJson = s.costCodeJson
+            ..costCodeAt = s.costCodeAt,
+        );
+        shops++;
+      }
+      continue;
+    }
+    if (here != null && !newerCode && here.costCodeAt != null) {
+      s
+        ..costCodeJson = here.costCodeJson
+        ..costCodeAt = here.costCodeAt; // a newer pull elsewhere doesn't undo our newer code
+    }
     await db.saveShop(s);
     await db.replaceShopProducts(s.uid, [
       for (final p in (r['products'] as List? ?? [])) {...(p as Map).cast<String, Object?>()}..remove('shop_uid'),

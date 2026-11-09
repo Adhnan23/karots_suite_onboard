@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import '../data/models.dart';
+import '../flavor.dart';
+
 /// A shop's secret cost letters (Onboard only): each digit has one or more
 /// letters, so "ESX" written on a box reads 230. Matched ignoring case; a typed
 /// point passes through.
@@ -58,4 +61,12 @@ class CostCode {
     }
     return (value: out.toString(), error: null);
   }
+}
+
+/// The shop's code for typing costs: Onboard only (Shelf's staff know their own
+/// code), null when the shop has none.
+CostCode? codeFor(Shop shop) {
+  if (isShelf) return null;
+  final c = shop.costCode;
+  return c.isEmpty ? null : c;
 }

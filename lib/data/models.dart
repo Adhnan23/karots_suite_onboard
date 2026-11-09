@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../input/cost_code.dart';
+
 import 'package:uuid/uuid.dart';
 
 const _uuid = Uuid();
@@ -169,6 +171,8 @@ class Shop {
     this.installId = '',
     this.secretName = '',
     this.lastPull,
+    this.costCodeJson = '',
+    this.costCodeAt,
     Map<String, dynamic>? snapshot,
   }) : uid = uid ?? newUid(),
        snapshot = snapshot ?? {};
@@ -179,6 +183,12 @@ class Shop {
   String secretName;
   DateTime? lastPull;
   Map<String, dynamic> snapshot;
+
+  /// The shop's secret cost letters ('' = none) and when they were last changed,
+  /// so team sync carries an edit even without a newer pull (Onboard only).
+  String costCodeJson;
+  DateTime? costCodeAt;
+  CostCode get costCode => CostCode.fromJson(costCodeJson);
 
   List<String> get plugins => [for (final p in (snapshot['plugins'] as List? ?? [])) '$p'];
   bool has(String plugin) => plugins.contains(plugin);
@@ -196,6 +206,8 @@ class Shop {
     'secret_name': secretName,
     'last_pull': lastPull?.toIso8601String(),
     'snapshot': jsonEncode(snapshot),
+    'cost_code': costCodeJson,
+    'cost_code_at': costCodeAt?.toIso8601String(),
   };
   factory Shop.fromRow(Map r) => Shop(
     uid: r['uid'] as String,
@@ -205,6 +217,8 @@ class Shop {
     installId: r['install_id'] as String? ?? '',
     secretName: r['secret_name'] as String? ?? '',
     lastPull: DateTime.tryParse(r['last_pull'] as String? ?? ''),
+    costCodeJson: r['cost_code'] as String? ?? '',
+    costCodeAt: DateTime.tryParse(r['cost_code_at'] as String? ?? ''),
     snapshot: (jsonDecode(r['snapshot'] as String? ?? '{}') as Map).cast<String, dynamic>(),
   );
 }
