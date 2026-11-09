@@ -11,8 +11,10 @@ import 'identify_sheet.dart';
 import 'product_form.dart';
 
 /// Search every field, typos allowed (searchProducts); kind: only products seen in that kind of shop.
-List<CatalogProduct> filterCatalog(List<CatalogProduct> all, String q, String? kind) =>
-    searchProducts([for (final p in all) if (kind == null || p.kinds.contains(kind)) p], q);
+List<CatalogProduct> filterCatalog(List<CatalogProduct> all, String q, String? kind) => searchProducts([
+  for (final p in all)
+    if (kind == null || p.kinds.contains(kind)) p,
+], q);
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
@@ -133,9 +135,34 @@ class CatalogProductPage extends StatefulWidget {
   State<CatalogProductPage> createState() => _CatalogProductPageState();
 }
 
-class _CatalogProductPageState extends State<CatalogProductPage> {
+class _CatalogProductPageState extends State<CatalogProductPage> with WidgetsBindingObserver {
   var form = GlobalKey<ProductFormState>();
   late CatalogProduct product = widget.product;
+
+  /// Keeps unsaved New product work as the draft (on leaving, or the app going to the background).
+  void _keep() {
+    final f = form.currentState;
+    if (!widget.keepDraft || f == null || !f.changed) return;
+    catalogNewDraft = f.readDraft();
+    keepDrafts();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) _keep();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -146,15 +173,7 @@ class _CatalogProductPageState extends State<CatalogProductPage> {
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         final f = form.currentState;
-        leaveEditor(
-          context,
-          changed: f?.changed ?? false,
-          keep: widget.keepDraft
-              ? () {
-                  if (f != null && f.changed) catalogNewDraft = f.readDraft();
-                }
-              : null,
-        );
+        leaveEditor(context, changed: f?.changed ?? false, keep: widget.keepDraft ? _keep : null);
       },
       child: Scaffold(
         appBar: AppBar(
@@ -172,11 +191,7 @@ class _CatalogProductPageState extends State<CatalogProductPage> {
                 tooltip: 'Delete from the catalogue',
                 icon: const Icon(Icons.delete_outline),
                 onPressed: () async {
-                  if (!await confirm(
-                    context,
-                    'Delete ${product.name}?',
-                    'It leaves the catalogue, on your team\'s devices too. Shops keep their own copy.',
-                  )) {
+                  if (!await confirm(context, 'Delete ${product.name}?', 'It leaves the catalogue, on your team\'s devices too. Shops keep their own copy.')) {
                     return;
                   }
                   await db.deleteProduct(product.uid);
@@ -193,6 +208,7 @@ class _CatalogProductPageState extends State<CatalogProductPage> {
                 DraftBar(
                   onStartOver: () => setState(() {
                     catalogNewDraft = null;
+                    keepDrafts();
                     product = CatalogProduct(name: '');
                     form = GlobalKey<ProductFormState>();
                   }),
@@ -232,7 +248,10 @@ class _CatalogProductPageState extends State<CatalogProductPage> {
               await db.saveSupplier(CatalogSupplier(name: p.supplier, kinds: {...p.kinds}));
             }
             await db.saveProduct(p);
-            if (widget.keepDraft) catalogNewDraft = null;
+            if (widget.keepDraft) {
+              catalogNewDraft = null;
+              keepDrafts();
+            }
             if (context.mounted) Navigator.pop(context);
           },
           icon: const Icon(Icons.save_rounded),

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../data/db.dart';
+import '../data/drafts.dart';
 import '../data/models.dart';
 import '../main.dart' show buildApp;
 import '../screens/shop_screen.dart';
@@ -33,10 +34,7 @@ class ShelfApp extends StatefulWidget {
 }
 
 class _ShelfAppState extends State<ShelfApp> {
-  late final KeyStore store = FallbackStore(
-    SecureStore(),
-    FileStore('${Platform.environment['HOME'] ?? '.'}/.local/share/karots_suite_shelf/store.json'),
-  );
+  late final KeyStore store = FallbackStore(SecureStore(), FileStore('${Platform.environment['HOME'] ?? '.'}/.local/share/karots_suite_shelf/store.json'));
   late final mode = ModeController(store)..load();
   late final accounts = ShelfAccounts(store);
   AppState? app;
@@ -62,7 +60,11 @@ class _ShelfAppState extends State<ShelfApp> {
   }
 
   Future<AppState> _app() async {
-    final a = app ??= AppState(await Db.open(), store, mode);
+    if (app == null) {
+      app = AppState(await Db.open(), store, mode);
+      await loadDrafts(app!.db);
+    }
+    final a = app!;
     a
       ..shelfDevice = device!
       ..lockNow = lock;

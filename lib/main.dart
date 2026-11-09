@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'app.dart';
 import 'data/db.dart';
+import 'data/drafts.dart';
 import 'state.dart';
 import 'lock/lock_screen.dart';
 import 'screens/shop_actions.dart';
@@ -23,16 +24,16 @@ class OnboardApp extends StatefulWidget {
 }
 
 class _OnboardAppState extends State<OnboardApp> {
-  late final KeyStore store = FallbackStore(
-    SecureStore(),
-    FileStore('${Platform.environment['HOME'] ?? '.'}/.local/share/karots_suite_onboard/store.json'),
-  );
+  late final KeyStore store = FallbackStore(SecureStore(), FileStore('${Platform.environment['HOME'] ?? '.'}/.local/share/karots_suite_onboard/store.json'));
   late final mode = ModeController(store)..load();
   bool open = false;
   AppState? app;
 
   Future<void> unlock() async {
-    app ??= AppState(await Db.open(), store, mode);
+    if (app == null) {
+      app = AppState(await Db.open(), store, mode);
+      await loadDrafts(app!.db);
+    }
     await app!.resumeTeam();
     setState(() => open = true);
   }
@@ -50,18 +51,13 @@ class _OnboardAppState extends State<OnboardApp> {
 
 /// The app's frame. The shared state sits above the navigator, so every page
 /// opened on top reaches it too (not only the first screen).
-Widget buildApp({
-  required AppState? app,
-  required Widget home,
-  ThemeMode mode = ThemeMode.system,
-  bool fonts = true,
-  String title = 'Karots Suite Onboard',
-}) => MaterialApp(
-  title: title,
-  debugShowCheckedModeBanner: false,
-  theme: ksTheme(Brightness.light, fonts: fonts),
-  darkTheme: ksTheme(Brightness.dark, fonts: fonts),
-  themeMode: mode,
-  builder: (context, child) => app == null ? child! : AppScope(state: app, child: child!),
-  home: home,
-);
+Widget buildApp({required AppState? app, required Widget home, ThemeMode mode = ThemeMode.system, bool fonts = true, String title = 'Karots Suite Onboard'}) =>
+    MaterialApp(
+      title: title,
+      debugShowCheckedModeBanner: false,
+      theme: ksTheme(Brightness.light, fonts: fonts),
+      darkTheme: ksTheme(Brightness.dark, fonts: fonts),
+      themeMode: mode,
+      builder: (context, child) => app == null ? child! : AppScope(state: app, child: child!),
+      home: home,
+    );

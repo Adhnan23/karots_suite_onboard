@@ -53,7 +53,7 @@ class ShopProductEditor extends StatefulWidget {
   State<ShopProductEditor> createState() => _ShopProductEditorState();
 }
 
-class _ShopProductEditorState extends State<ShopProductEditor> {
+class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindingObserver {
   var form = GlobalKey<ProductFormState>(); // a new key when another product is picked, so the form starts over
   var stock = GlobalKey<StockEditorState>();
   late Draft d = widget.draft;
@@ -63,6 +63,38 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
   late bool restored = widget.restored;
   Shop get s => widget.shop;
   bool get isNew => d.remoteId == 0;
+
+  /// Keeps unsaved New product work as the shop's draft (on leaving, or the app going to the background).
+  void _keep() {
+    final f = form.currentState;
+    if (!widget.keepDraft || f == null || !(f.changed || f.read().name.isNotEmpty || supplierChoice != 'none')) return;
+    stock.currentState?.apply(raw: true);
+    shopNewDrafts[s.uid] = (draft: d..product = f.readDraft(), supplier: supplierChoice);
+    keepDrafts();
+  }
+
+  void _drop() {
+    if (!widget.keepDraft) return;
+    shopNewDrafts.remove(s.uid);
+    keepDrafts();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) _keep();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -141,7 +173,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
         if (mounted) toast(context, '${p.name} changed in ${s.name}');
       }
       if (c != null) app.pushed(s);
-      if (widget.keepDraft) shopNewDrafts.remove(s.uid);
+      _drop();
       if (mounted) Navigator.pop(context, true);
     } on PushError catch (e) {
       if (!mounted) return;
@@ -171,7 +203,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
       // change, safe to send again): it waits in the queue instead.
       if (isShelf && e is! SuiteError && (!isNew || d.remoteId == 0)) {
         await queue(app.db, s, isNew ? 'create' : 'update', d, who: app.who);
-        if (widget.keepDraft) shopNewDrafts.remove(s.uid);
+        _drop();
         if (mounted) {
           toast(context, 'Out of reach: saved to push when ${s.name} is back');
           Navigator.pop(context, true);
@@ -197,17 +229,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         final f = form.currentState;
-        leaveEditor(
-          context,
-          changed: f?.changed ?? false,
-          keep: widget.keepDraft
-              ? () {
-                  if (f == null || !(f.changed || f.read().name.isNotEmpty || supplierChoice != 'none')) return;
-                  stock.currentState?.apply(raw: true);
-                  shopNewDrafts[s.uid] = (draft: d..product = f.readDraft(), supplier: supplierChoice);
-                }
-              : null,
-        );
+        leaveEditor(context, changed: f?.changed ?? false, keep: widget.keepDraft ? _keep : null);
       },
       child: Scaffold(
         appBar: AppBar(
@@ -275,6 +297,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
                 DraftBar(
                   onStartOver: () => setState(() {
                     shopNewDrafts.remove(s.uid);
+                    keepDrafts();
                     d = Draft(product: newShopProduct(s));
                     supplierChoice = 'none';
                     form = GlobalKey<ProductFormState>();
