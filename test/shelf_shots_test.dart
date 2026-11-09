@@ -11,7 +11,9 @@ import 'package:karots_suite_onboard/data/models.dart';
 import 'package:karots_suite_onboard/flavor.dart';
 import 'package:karots_suite_onboard/main.dart';
 import 'package:karots_suite_onboard/screens/shop_actions.dart';
+import 'package:karots_suite_onboard/screens/shop_product_editor.dart';
 import 'package:karots_suite_onboard/screens/shop_screen.dart';
+import 'package:karots_suite_onboard/sync/push.dart';
 import 'package:karots_suite_onboard/settings/secure.dart';
 import 'package:karots_suite_onboard/shelf/account.dart';
 import 'package:karots_suite_onboard/shelf/connect_screen.dart';
@@ -32,15 +34,8 @@ void main() {
     registerShopActions();
     sqfliteFfiInit();
     final db = (await t.runAsync(() => Db.openWith(path: inMemoryDatabasePath, factory: databaseFactoryFfi)))!;
-    final shop = Shop(
-      name: 'Iman Pharmacy',
-      address: 'http://192.168.1.10:3000',
-      lastPull: DateTime(2026, 11, 8, 9, 30),
-      snapshot: {'stockTake': true},
-    );
-    final who = (await t.runAsync(
-      () => ShelfAccount.make(address: shop.address, phone: '0771111111', name: 'Nimali', role: 'cashier', pin: '1234'),
-    ))!;
+    final shop = Shop(name: 'Iman Pharmacy', address: 'http://192.168.1.10:3000', lastPull: DateTime(2026, 11, 8, 9, 30), snapshot: {'stockTake': true});
+    final who = (await t.runAsync(() => ShelfAccount.make(address: shop.address, phone: '0771111111', name: 'Nimali', role: 'cashier', pin: '1234')))!;
     final app = AppState(db, MemoryStore())
       ..person = who
       ..connectProblem = "Your PIN was changed on the shop's PC: lock, then sign in again with the new one";
@@ -49,29 +44,36 @@ void main() {
       'shelf-connect': ShelfConnectScreen(device: 'd', onSignedIn: (_, _, _, _, _) {}),
       'shelf-lock': ShelfLockScreen(account: who, accounts: accounts, onOpen: (_) {}, onSignIn: ({phone}) {}),
       'shelf-shop': ShopScreen(shop: shop),
+      'shelf-editor': ShopProductEditor(
+        shop: shop,
+        draft: Draft(product: newShopProduct(shop)),
+      ),
     };
-    const size = Size(390, 844);
-    for (final b in Brightness.values) {
-      for (final e in screens.entries) {
-        await t.binding.setSurfaceSize(size);
-        t.view.physicalSize = size;
-        t.view.devicePixelRatio = 1;
-        final key = GlobalKey();
-        await t.pumpWidget(
-          RepaintBoundary(
-            key: key,
-            child: buildApp(app: app, home: e.value, fonts: false, mode: b == Brightness.dark ? ThemeMode.dark : ThemeMode.light),
-          ),
-        );
-        await t.runAsync(() => Future.delayed(const Duration(milliseconds: 250)));
-        await t.pump();
-        final img = await t.runAsync(() async {
-          final i = await (key.currentContext!.findRenderObject() as RenderRepaintBoundary).toImage(pixelRatio: 1.5);
-          return (await i.toByteData(format: ui.ImageByteFormat.png))!;
-        });
-        File('$dir/${e.key}-${b.name}.png').writeAsBytesSync(img!.buffer.asUint8List());
+    for (final size in const [Size(360, 640), Size(390, 844)]) {
+      for (final b in Brightness.values) {
+        for (final e in screens.entries) {
+          await t.binding.setSurfaceSize(size);
+          t.view.physicalSize = size;
+          t.view.devicePixelRatio = 1;
+          final key = GlobalKey();
+          await t.pumpWidget(
+            RepaintBoundary(
+              key: key,
+              child: buildApp(app: app, home: e.value, fonts: false, mode: b == Brightness.dark ? ThemeMode.dark : ThemeMode.light),
+            ),
+          );
+          await t.runAsync(() => Future.delayed(const Duration(milliseconds: 250)));
+          await t.pump();
+          final img = await t.runAsync(() async {
+            final i = await (key.currentContext!.findRenderObject() as RenderRepaintBoundary).toImage(pixelRatio: 1.5);
+            return (await i.toByteData(format: ui.ImageByteFormat.png))!;
+          });
+          File('$dir/${e.key}-${size.width < 380 ? 'small' : 'phone'}-${b.name}.png').writeAsBytesSync(img!.buffer.asUint8List());
+        }
       }
     }
+    await t.pumpWidget(const SizedBox());
+    await t.pump(const Duration(seconds: 5)); // the editor's timers
     setShelf(false);
     await t.runAsync(() => db.close());
   }, skip: dir == null);

@@ -196,7 +196,7 @@ void main() {
     final typing = <String, Map<String, String>>{
       'quickadd': {'Cost price': 'ESX', 'Selling price': '300', '÷ how many': '10', 'Quantity': '40'},
     };
-    for (final size in [const Size(390, 844), const Size(1280, 800)]) {
+    for (final size in [const Size(360, 640), const Size(390, 844), const Size(1280, 800)]) {
       for (final b in Brightness.values) {
         for (final e in screens.entries) {
           await t.binding.setSurfaceSize(size);
@@ -222,7 +222,7 @@ void main() {
             final i = await (key.currentContext!.findRenderObject() as RenderRepaintBoundary).toImage(pixelRatio: 1.5);
             return (await i.toByteData(format: ui.ImageByteFormat.png))!;
           });
-          final w = size.width < 500 ? 'phone' : 'desktop';
+          final w = size.width < 380 ? 'small' : size.width < 500 ? 'phone' : 'desktop';
           File('$dir/${e.key}-$w-${b.name}.png').writeAsBytesSync(img!.buffer.asUint8List());
         }
       }
