@@ -93,4 +93,25 @@ void main() {
     await t.pumpAndSettle();
     expect(key.currentState!.problem(), "'q' isn't in this shop's code");
   });
+
+  testWidgets('a bad ÷ never blanks the prices read() gives; a draft keeps what was typed', (t) async {
+    final key = GlobalKey<ProductFormState>();
+    await t.pumpWidget(
+      host(
+        SingleChildScrollView(
+          child: ProductForm(key: key, product: CatalogProduct(name: 'Panadol', cost: '9.50', selling: '12'), costCode: example),
+        ),
+      ),
+    );
+    await t.enterText(box('÷ how many'), '1.2.3');
+    await t.pumpAndSettle();
+    expect(key.currentState!.problem(), 'How many must be a number');
+    final p = key.currentState!.read();
+    expect((p.cost, p.selling), ('9.50', '12'));
+    await t.enterText(box('Cost price'), 'ESQ');
+    await t.enterText(box('Selling price'), '30');
+    await t.pumpAndSettle();
+    final d = key.currentState!.readDraft();
+    expect((d.cost, d.selling), ('ESQ', '30'));
+  });
 }

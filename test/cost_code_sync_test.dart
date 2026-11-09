@@ -72,6 +72,22 @@ void main() {
     expect(got.costCode.decode('ESX').value, '230');
   });
 
+  test('saving a stale shop (a connected device\'s pull) keeps the newer code already stored', () async {
+    final db = await fresh();
+    final live = Shop(name: 'Big Pharmacy', lastPull: pulled);
+    await db.saveShop(live);
+    await db.saveShop(
+      Shop.fromRow(live.toRow())
+        ..costCodeJson = example.toJson()
+        ..costCodeAt = DateTime(2026, 11, 9),
+    ); // a team sync brought the code
+    live.lastPull = DateTime(2026, 11, 9, 12);
+    await db.saveShop(live); // the auto pull saves its own copy
+    expect((await db.shops()).single.costCode.decode('ESX').value, '230');
+    expect(live.costCode.decode('ESX').value, '230', reason: 'the live copy learns it too');
+    await db.close();
+  });
+
   test('codeFor: the shop\'s code in Onboard, nothing in Shelf or when empty', () {
     final s = Shop(name: 'A')..costCodeJson = example.toJson();
     expect(codeFor(s)?.decode('ESX').value, '230');

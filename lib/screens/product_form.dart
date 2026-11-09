@@ -93,9 +93,17 @@ class ProductFormState extends State<ProductForm> {
   /// Why the prices can't be saved yet (a cost the shop's code can't read), else null.
   String? problem() => prices.currentState?.read().error;
 
+  /// The product as typed, cost letters and all, nothing divided: for a kept
+  /// draft, so leaving and coming back loses nothing.
+  CatalogProduct readDraft() {
+    final t = prices.currentState?.typed;
+    return CatalogProduct.fromJson({...read().toJson(), 'cost': t?.cost ?? p.cost, 'selling': t?.selling ?? p.selling});
+  }
+
   /// The product as edited (same uid).
   CatalogProduct read() {
-    final pr = prices.currentState?.read();
+    final r = prices.currentState?.read();
+    final pr = r?.error == null ? r : null; // never blank the prices: problem() says why first
     return CatalogProduct.fromJson({
       ...p.toJson(),
       'name': name.text.trim(),

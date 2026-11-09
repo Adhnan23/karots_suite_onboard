@@ -156,7 +156,7 @@ class _CatalogProductPageState extends State<CatalogProductPage> {
           changed: f?.changed ?? false,
           keep: widget.keepDraft
               ? () {
-                  if (f != null && f.changed) catalogNewDraft = f.read();
+                  if (f != null && f.changed) catalogNewDraft = f.readDraft();
                 }
               : null,
         );
@@ -223,6 +223,8 @@ class _CatalogProductPageState extends State<CatalogProductPage> {
         ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () async {
+            final problem = form.currentState!.problem();
+            if (problem != null) return toast(context, problem, error: true);
             final p = form.currentState!.read();
             if (p.name.isEmpty) return toast(context, 'Give it a name', error: true);
             for (final code in p.allCodes) {

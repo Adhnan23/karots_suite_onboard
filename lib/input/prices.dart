@@ -1,13 +1,20 @@
 import 'cost_code.dart';
 
 /// What's typed in the price boxes: cost (digits, or the shop's code letters),
-/// selling, Markup × and ÷ how many (per; blank = no dividing).
+/// selling, Markup × and ÷ how many (per; blank = no dividing). markupTyped: the
+/// markup was typed last (not the selling price), so a new cost moves the selling price.
 class PriceInput {
-  const PriceInput({this.cost = '', this.selling = '', this.markup = '', this.per = ''});
+  const PriceInput({this.cost = '', this.selling = '', this.markup = '', this.per = '', this.markupTyped = false});
   final String cost, selling, markup, per;
+  final bool markupTyped;
 
-  PriceInput copyWith({String? cost, String? selling, String? markup, String? per}) =>
-      PriceInput(cost: cost ?? this.cost, selling: selling ?? this.selling, markup: markup ?? this.markup, per: per ?? this.per);
+  PriceInput copyWith({String? cost, String? selling, String? markup, String? per, bool? markupTyped}) => PriceInput(
+    cost: cost ?? this.cost,
+    selling: selling ?? this.selling,
+    markup: markup ?? this.markup,
+    per: per ?? this.per,
+    markupTyped: markupTyped ?? this.markupTyped,
+  );
 }
 
 double _num(String s) => double.tryParse(s.trim()) ?? 0;
@@ -24,19 +31,20 @@ String markupOf(String cost, String selling) => _num(cost) > 0 && _num(selling) 
 
 String _costNumber(String typed, CostCode? code) => code == null ? typed : code.decode(typed).value;
 
-/// Cost ⇄ markup ⇄ selling (Suite price.ts): cost or markup set the selling
-/// price; selling sets the markup. The typed cost is never rewritten.
+/// Cost ⇄ markup ⇄ selling: a typed markup sets the selling price (and keeps
+/// doing so as the cost changes); a typed selling price sets the markup, and then
+/// a cost change only updates the markup, so typing a cost key by key never moves
+/// a price nobody asked to change. The typed cost is never rewritten.
 PriceInput editPrice(PriceInput p, String field, String value, CostCode? code) {
+  if (field == 'per') return p.copyWith(per: value);
   final next = switch (field) {
     'cost' => p.copyWith(cost: value),
-    'markup' => p.copyWith(markup: value),
-    'selling' => p.copyWith(selling: value),
-    _ => p.copyWith(per: value),
+    'markup' => p.copyWith(markup: value, markupTyped: true),
+    _ => p.copyWith(selling: value, markupTyped: false),
   };
-  if (field == 'per') return next;
   final cost = _costNumber(next.cost, code);
   if (field == 'selling') return next.copyWith(markup: markupOf(cost, value));
-  if (_num(cost) > 0 && _num(next.markup) > 0) return next.copyWith(selling: trimDec(_num(cost) * _num(next.markup), 2));
+  if (next.markupTyped && _num(cost) > 0 && _num(next.markup) > 0) return next.copyWith(selling: trimDec(_num(cost) * _num(next.markup), 2));
   return field == 'cost' ? next.copyWith(markup: markupOf(cost, next.selling)) : next;
 }
 

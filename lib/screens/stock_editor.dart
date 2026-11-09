@@ -39,11 +39,12 @@ class StockEditorState extends State<StockEditor> {
     for (final b in widget.draft.batches.isEmpty ? [StockBatch()] : widget.draft.batches) _B(b),
   ];
 
-  /// Writes the editor's state into the draft.
-  void apply() {
+  /// Writes the editor's state into the draft; raw keeps cost letters as typed
+  /// (a kept draft), else costs are decoded for saving.
+  void apply({bool raw = false}) {
     widget.draft
       ..mode = mode
-      ..batches = [for (final r in rows) r.read(widget.code)];
+      ..batches = [for (final r in rows) r.read(raw ? null : widget.code)];
   }
 
   /// A batch cost the shop's code can't read, else null.

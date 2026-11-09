@@ -17,11 +17,11 @@ void main() {
     p = editPrice(p, 'selling', '250', null);
     expect(p.markup, '1.25');
     p = editPrice(p, 'cost', '100', null);
-    expect(p.selling, '125');
+    expect((p.selling, p.markup), ('250', '2.5'));
   });
 
   test('a coded cost drives the markup but stays as typed', () {
-    final p = editPrice(const PriceInput(markup: '1.15'), 'cost', 'ESX', example);
+    final p = editPrice(const PriceInput(markup: '1.15', markupTyped: true), 'cost', 'ESX', example);
     expect(p.cost, 'ESX');
     expect(p.selling, '264.5');
   });
@@ -49,5 +49,24 @@ void main() {
 
   test('a cost the code cannot read is an error', () {
     expect(resolve(const PriceInput(cost: 'ESQ'), example).error, "'q' isn't in this shop's code");
+  });
+
+  test('typing a cost key by key never moves a selling price nobody typed a markup for', () {
+    var p = const PriceInput(selling: '100');
+    p = editPrice(p, 'cost', '3', null);
+    p = editPrice(p, 'cost', '30', null);
+    expect((p.selling, p.markup), ('100', '3.33'));
+    p = editPrice(const PriceInput(cost: '30', selling: '100', markup: '3.33'), 'cost', '3', null);
+    p = editPrice(p, 'cost', '30', null);
+    expect(p.selling, '100', reason: 'backspace and retype keeps the price');
+  });
+
+  test('a typed markup keeps driving the selling price as the cost changes', () {
+    var p = editPrice(const PriceInput(cost: '200'), 'markup', '1.15', null);
+    p = editPrice(p, 'cost', '300', null);
+    expect(p.selling, '345');
+    p = editPrice(p, 'selling', '400', null);
+    p = editPrice(p, 'cost', '200', null);
+    expect(p.selling, '400', reason: 'typing the selling price hands the lead back to it');
   });
 }

@@ -97,6 +97,8 @@ void main() {
     await t.enterText(find.widgetWithText(TextField, 'Cost (blank = product\'s)'), 'ESQ');
     await t.pumpAndSettle();
     expect(key.currentState!.problem(), "'q' isn't in this shop's code");
+    key.currentState!.apply(raw: true);
+    expect(d.batches.last.cost, 'ESQ', reason: 'a kept draft holds what was typed, not a blank');
   });
 
   testWidgets('a lot\'s cost in the code saves its number; a wrong letter keeps the dialog open', (t) async {

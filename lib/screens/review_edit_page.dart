@@ -47,6 +47,8 @@ class ReviewEditPage extends StatelessWidget {
         icon: const Icon(Icons.check_rounded),
         label: const Text('Accept'),
         onPressed: () async {
+          final problem = form.currentState?.problem();
+          if (problem != null) return toast(context, problem, error: true);
           final x = form.currentState?.read();
           if (x == null || x.name.isEmpty) return toast(context, 'Give it a name', error: true);
           await acceptReview(db, item.uid, edited: x.toJson().cast<String, dynamic>());

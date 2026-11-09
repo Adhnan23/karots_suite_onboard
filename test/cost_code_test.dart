@@ -35,4 +35,12 @@ void main() {
     expect(example.hasLetters('ESX'), isTrue);
     expect(example.hasLetters('23.5'), isFalse);
   });
+
+  test('spaces in the cheat sheet are ignored; a digit or point as a letter is a problem', () {
+    final c = CostCode({0: 'i x', 2: ' e ', 3: 's'});
+    expect(c.letters[0], 'ix');
+    expect(c.decode('ESX').value, '230');
+    expect(CostCode({0: 'i5'}).problem(), "0 has '5': use letters only");
+    expect(CostCode({0: 'i.'}).problem(), "0 has '.': use letters only");
+  });
 }

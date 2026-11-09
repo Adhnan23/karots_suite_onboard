@@ -202,8 +202,8 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
           keep: widget.keepDraft
               ? () {
                   if (f == null || !(f.changed || f.read().name.isNotEmpty || supplierChoice != 'none')) return;
-                  stock.currentState?.apply();
-                  shopNewDrafts[s.uid] = (draft: d..product = f.read(), supplier: supplierChoice);
+                  stock.currentState?.apply(raw: true);
+                  shopNewDrafts[s.uid] = (draft: d..product = f.readDraft(), supplier: supplierChoice);
                 }
               : null,
         );

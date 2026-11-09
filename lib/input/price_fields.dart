@@ -50,14 +50,19 @@ class PriceFieldsState extends State<PriceFields> {
   late final selling = TextEditingController(text: widget.selling);
   late final markup = TextEditingController(text: markupOf(widget.code == null ? widget.cost : widget.code!.decode(widget.cost).value, widget.selling));
   final per = TextEditingController();
+  var _markupTyped = false;
 
-  PriceInput get _input => PriceInput(cost: cost.text, selling: selling.text, markup: markup.text, per: per.text);
+  PriceInput get _input => PriceInput(cost: cost.text, selling: selling.text, markup: markup.text, per: per.text, markupTyped: _markupTyped);
+
+  /// Exactly what's in the cost and selling boxes (letters kept), for a kept draft.
+  ({String cost, String selling}) get typed => (cost: cost.text.trim(), selling: selling.text.trim());
 
   /// The cost and selling price to save (decoded, ÷ applied), or an error.
   ({String cost, String selling, String? error}) read() => resolve(_input, widget.code);
 
   void _edit(String field, String value) {
     final next = editPrice(_input, field, value, widget.code);
+    _markupTyped = next.markupTyped;
     if (field != 'selling' && selling.text != next.selling) selling.text = next.selling;
     if (field != 'markup' && markup.text != next.markup) markup.text = next.markup;
     setState(() {});

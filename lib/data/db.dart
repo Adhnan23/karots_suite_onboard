@@ -188,7 +188,19 @@ class Db {
 
   // ---- shops ----
 
-  Future<void> saveShop(Shop s) => _w(raw.insert('shops', s.toRow(), conflictAlgorithm: ConflictAlgorithm.replace));
+  /// Saves a shop. A newer cost code already stored (from team sync) wins over the
+  /// copy being saved, and that copy learns it: a connected device's pull never
+  /// puts an old code back.
+  Future<void> saveShop(Shop s) async {
+    final got = await raw.query('shops', columns: ['cost_code', 'cost_code_at'], where: 'uid = ?', whereArgs: [s.uid]);
+    final at = got.isEmpty ? null : DateTime.tryParse(got.single['cost_code_at'] as String? ?? '');
+    if (at != null && (s.costCodeAt == null || at.isAfter(s.costCodeAt!))) {
+      s
+        ..costCodeJson = got.single['cost_code'] as String? ?? ''
+        ..costCodeAt = at;
+    }
+    await _w(raw.insert('shops', s.toRow(), conflictAlgorithm: ConflictAlgorithm.replace));
+  }
   Future<void> deleteShop(String uid) => _w(
     raw.transaction((t) async {
       await t.delete('shops', where: 'uid = ?', whereArgs: [uid]);

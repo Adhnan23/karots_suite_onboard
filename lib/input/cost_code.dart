@@ -10,7 +10,7 @@ class CostCode {
   CostCode(Map<int, String> letters)
     : letters = {
         for (final e in letters.entries)
-          if (e.value.trim().isNotEmpty) e.key: e.value.trim().toLowerCase(),
+          if (e.value.trim().isNotEmpty) e.key: e.value.replaceAll(RegExp(r'\s'), '').toLowerCase(),
       };
 
   /// Digit → its letters, lower case ({0: 'ix', 1: 'r', …}).
@@ -31,7 +31,7 @@ class CostCode {
     final seen = <String, int>{};
     for (final d in (letters.keys.toList()..sort())) {
       for (final ch in letters[d]!.split('')) {
-        if (ch.trim().isEmpty) continue;
+        if (RegExp(r'[0-9.]').hasMatch(ch)) return "$d has '$ch': use letters only";
         final was = seen[ch];
         if (was != null && was != d) return "'$ch' is on both $was and $d";
         seen[ch] = d;
