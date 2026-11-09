@@ -67,8 +67,7 @@ class _SyncHostScreenState extends State<SyncHostScreen> {
           children: [
             if (error.isNotEmpty) Text(error, style: TextStyle(color: c.danger)),
             if (h == null && error.isEmpty) const LinearProgressIndicator(),
-            if (h != null && h.closed)
-              Text('Closed after 5 wrong codes. Go back and open it again for a new code.', style: TextStyle(color: c.danger)),
+            if (h != null && h.closed) Text('Closed after 5 wrong codes. Go back and open it again for a new code.', style: TextStyle(color: c.danger)),
             if (h != null && !h.closed) ...[
               Text('On the other device: Shops → Backup → Sync with a device, and type these.', style: TextStyle(color: c.mutedForeground)),
               const SizedBox(height: 16),

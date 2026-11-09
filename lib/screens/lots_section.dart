@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../data/models.dart';
+import '../input/cost_code.dart';
 import '../input/field_kind.dart';
 import '../input/ks_field.dart';
+import '../input/price_fields.dart';
 import '../state.dart';
 import '../suite/client.dart';
 import '../sync/lots.dart';
@@ -73,42 +75,7 @@ class _LotsSectionState extends State<LotsSection> {
     return true;
   }
 
-  Future<Map<String, String>?> form(String title, {Lot? lot}) {
-    final qty = TextEditingController(text: lot?.qty ?? '');
-    final expiry = TextEditingController(text: lot?.expiry ?? '');
-    final cost = TextEditingController();
-    final price = TextEditingController(text: lot?.price ?? '');
-    return showDialog<Map<String, String>>(
-      context: context,
-      builder: (d) => AlertDialog(
-        title: Text(title),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              KsField(label: lot == null ? 'Quantity' : 'Count now', controller: qty, kind: FieldKind.number),
-              const SizedBox(height: 10),
-              KsField(label: 'Expiry', controller: expiry, kind: FieldKind.date),
-              if (lot == null) ...[
-                const SizedBox(height: 10),
-                KsField(label: 'Cost (blank = the product\'s)', controller: cost, kind: FieldKind.number),
-              ],
-              const SizedBox(height: 10),
-              KsField(label: 'Price (blank = the product\'s)', controller: price, kind: FieldKind.number),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(d), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () =>
-                Navigator.pop(d, {'qty': qty.text.trim(), 'expiry': expiry.text.trim(), 'cost': cost.text.trim(), 'price': price.text.trim()}),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
+  Future<Map<String, String>?> form(String title, {Lot? lot}) => lotForm(context, title, lot: lot, code: codeFor(widget.shop));
 
   Future<void> add() async {
     final cl = c;
@@ -172,10 +139,7 @@ class _LotsSectionState extends State<LotsSection> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Connect to ${widget.shop.name} to see and change its batches. A new batch can wait to be pushed.',
-            style: TextStyle(color: k.mutedForeground),
-          ),
+          Text('Connect to ${widget.shop.name} to see and change its batches. A new batch can wait to be pushed.', style: TextStyle(color: k.mutedForeground)),
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerLeft,
@@ -201,16 +165,9 @@ class _LotsSectionState extends State<LotsSection> {
                 borderRadius: BorderRadius.circular(KsTokens.radiusSm),
                 child: ListTile(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KsTokens.radiusSm)),
-                  title: Text(
-                    '${l.qty} · ${l.expiry.isEmpty ? 'no expiry' : 'expires ${l.expiry}'}',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
+                  title: Text('${l.qty} · ${l.expiry.isEmpty ? 'no expiry' : 'expires ${l.expiry}'}', style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text(
-                    [
-                      'cost ${l.cost}',
-                      l.price.isEmpty ? 'price follows the product' : 'price ${l.price}',
-                      if (l.source.isNotEmpty) l.source,
-                    ].join(' · '),
+                    ['cost ${l.cost}', l.price.isEmpty ? 'price follows the product' : 'price ${l.price}', if (l.source.isNotEmpty) l.source].join(' · '),
                   ),
                   trailing: const Icon(Icons.edit_outlined),
                   onTap: () => edit(l),
@@ -227,4 +184,44 @@ class _LotsSectionState extends State<LotsSection> {
       ],
     );
   }
+}
+
+/// A batch's count, expiry, cost and price. The cost takes the shop's code
+/// letters (Onboard only) and is saved as its number; one it can't read keeps
+/// the dialog open.
+Future<Map<String, String>?> lotForm(BuildContext context, String title, {Lot? lot, CostCode? code}) {
+  final qty = TextEditingController(text: lot?.qty ?? '');
+  final expiry = TextEditingController(text: lot?.expiry ?? '');
+  final cost = TextEditingController();
+  final price = TextEditingController(text: lot?.price ?? '');
+  return showDialog<Map<String, String>>(
+    context: context,
+    builder: (d) => AlertDialog(
+      title: Text(title),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            KsField(label: lot == null ? 'Quantity' : 'Count now', controller: qty, kind: FieldKind.number),
+            const SizedBox(height: 10),
+            KsField(label: 'Expiry', controller: expiry, kind: FieldKind.date),
+            if (lot == null) ...[const SizedBox(height: 10), CostField(label: 'Cost (blank = the product\'s)', controller: cost, code: code)],
+            const SizedBox(height: 10),
+            KsField(label: 'Price (blank = the product\'s)', controller: price, kind: FieldKind.number),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(d), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () {
+            final c = code?.decode(cost.text);
+            if (c?.error != null) return;
+            Navigator.pop(d, {'qty': qty.text.trim(), 'expiry': expiry.text.trim(), 'cost': c?.value ?? cost.text.trim(), 'price': price.text.trim()});
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    ),
+  );
 }

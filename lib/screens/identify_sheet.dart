@@ -37,9 +37,7 @@ class _IdentifySheet extends StatefulWidget {
 }
 
 class _IdentifySheetState extends State<_IdentifySheet> {
-  late final query = TextEditingController(
-    text: widget.form.name.text.trim().isNotEmpty ? widget.form.name.text.trim() : widget.form.barcode.text.trim(),
-  );
+  late final query = TextEditingController(text: widget.form.name.text.trim().isNotEmpty ? widget.form.name.text.trim() : widget.form.barcode.text.trim());
   final reply = TextEditingController();
   String prompt = '';
   Identified? result;
@@ -123,9 +121,7 @@ class _IdentifySheetState extends State<_IdentifySheet> {
           children: [
             const Text('Identify', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             Text(
-              client != null
-                  ? 'Asks ${widget.shop.name}\'s AI Assistant, with its settings'
-                  : 'Offline: copy the prompt to a chatbot, paste its answer back',
+              client != null ? 'Asks ${widget.shop.name}\'s AI Assistant, with its settings' : 'Offline: copy the prompt to a chatbot, paste its answer back',
               style: TextStyle(color: k.mutedForeground),
             ),
             const SizedBox(height: 12),
@@ -218,8 +214,7 @@ class _IdentifySheetState extends State<_IdentifySheet> {
                           if (c.category.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Tag(c.category)),
                           if (c.explanation.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text(c.explanation)),
                           if (c.specs.isNotEmpty) Text(c.specs, style: TextStyle(color: k.faint, fontSize: 12)),
-                          for (final e in c.fields.entries)
-                            Text('${e.key}: ${e.value}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                          for (final e in c.fields.entries) Text('${e.key}: ${e.value}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                         ],
                       ),
                     ),

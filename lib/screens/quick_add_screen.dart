@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../data/models.dart';
 import '../input/field_kind.dart';
+import '../input/price_fields.dart';
+import '../input/cost_code.dart';
 import '../input/ks_field.dart';
 import '../state.dart';
 import '../sync/push.dart';
@@ -67,53 +69,10 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
   }
 
   Future<void> add(CatalogProduct p) async {
-    final cost = TextEditingController(), price = TextEditingController(text: p.selling); // cost differs by supplier: typed here
-    final qty = TextEditingController(), expiry = TextEditingController();
-    final go = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(ctx).bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(p.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            if (p.supplier.isNotEmpty) Text('from ${p.supplier}', style: TextStyle(color: KsTokens.of(ctx).mutedForeground, fontSize: 13)),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: KsField(label: 'Cost', controller: cost, kind: FieldKind.number),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: KsField(label: 'Price', controller: price, kind: FieldKind.number),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: KsField(label: 'Quantity', controller: qty, kind: FieldKind.number),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: KsField(label: 'Expiry', controller: expiry, kind: FieldKind.date),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Add to ${s.name}')),
-          ],
-        ),
-      ),
-    );
-    if (go != true || !mounted) return;
+    final v = await quickAddSheet(context, p, shopName: s.name, code: codeFor(s));
+    if (v == null || !mounted) return;
     final app = AppScope.of(context);
-    final d = quickDraft(p, cost: cost.text, price: price.text, qty: qty.text, expiry: expiry.text);
+    final d = quickDraft(p, cost: v.cost, price: v.price, qty: v.qty, expiry: v.expiry);
     final c = app.session(s);
     if (c == null) {
       await queue(app.db, s, 'create', d, who: app.who);
@@ -235,4 +194,57 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
       ),
     );
   }
+}
+
+/// Quick add's sheet: cost (the shop's code letters too), selling, markup, ÷ how
+/// many, quantity and expiry. Null when closed; a cost the code can't read keeps it open.
+Future<({String cost, String price, String qty, String expiry})?> quickAddSheet(
+  BuildContext context,
+  CatalogProduct p, {
+  required String shopName,
+  CostCode? code,
+}) {
+  final prices = GlobalKey<PriceFieldsState>();
+  final qty = TextEditingController(), expiry = TextEditingController();
+  return showModalBottomSheet<({String cost, String price, String qty, String expiry})>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) => Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(ctx).bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(p.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            if (p.supplier.isNotEmpty) Text('from ${p.supplier}', style: TextStyle(color: KsTokens.of(ctx).mutedForeground, fontSize: 13)),
+            const SizedBox(height: 14),
+            PriceFields(key: prices, cost: '', selling: p.selling, code: code), // cost differs by supplier: typed here
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: KsField(label: 'Quantity', controller: qty, kind: FieldKind.number),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: KsField(label: 'Expiry', controller: expiry, kind: FieldKind.date),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                final r = prices.currentState!.read();
+                if (r.error != null) return;
+                Navigator.pop(ctx, (cost: r.cost, price: r.selling, qty: qty.text, expiry: expiry.text));
+              },
+              child: Text('Add to $shopName'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }

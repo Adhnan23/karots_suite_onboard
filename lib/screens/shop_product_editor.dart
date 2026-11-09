@@ -95,7 +95,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
 
   Future<void> save() async {
     final app = AppScope.of(context);
-    final problem = form.currentState!.problem();
+    final problem = form.currentState!.problem() ?? stock.currentState?.problem();
     if (problem != null) return toast(context, problem, error: true);
     final p = form.currentState!.read();
     if (p.name.isEmpty) return toast(context, 'Give it a name', error: true);
@@ -314,7 +314,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
                 const SizedBox(height: 12),
                 Section(
                   title: 'Old stock',
-                  children: [StockEditor(key: stock, draft: d)],
+                  children: [StockEditor(key: stock, draft: d, code: codeFor(s))],
                 ),
               ],
             ],

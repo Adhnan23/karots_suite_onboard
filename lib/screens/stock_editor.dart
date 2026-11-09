@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../input/cost_code.dart';
 import '../input/field_kind.dart';
 import '../input/ks_field.dart';
+import '../input/price_fields.dart';
 import '../sync/push.dart';
 import '../theme/tokens.dart';
 
 /// Old stock: none, one batch, or several batches each with expiry and prices.
 class StockEditor extends StatefulWidget {
-  const StockEditor({super.key, required this.draft});
+  const StockEditor({super.key, required this.draft, this.code});
   final Draft draft;
+
+  /// The shop's cost letters (Onboard only), for the batches' cost boxes.
+  final CostCode? code;
   @override
   State<StockEditor> createState() => StockEditorState();
 }
@@ -20,7 +25,12 @@ class _B {
       cost = TextEditingController(text: b.cost),
       selling = TextEditingController(text: b.selling);
   final TextEditingController qty, expiry, cost, selling;
-  StockBatch read() => StockBatch(qty: qty.text.trim(), expiry: expiry.text.trim(), cost: cost.text.trim(), selling: selling.text.trim());
+  StockBatch read(CostCode? code) => StockBatch(
+    qty: qty.text.trim(),
+    expiry: expiry.text.trim(),
+    cost: code == null ? cost.text.trim() : code.decode(cost.text).value,
+    selling: selling.text.trim(),
+  );
 }
 
 class StockEditorState extends State<StockEditor> {
@@ -33,7 +43,18 @@ class StockEditorState extends State<StockEditor> {
   void apply() {
     widget.draft
       ..mode = mode
-      ..batches = [for (final r in rows) r.read()];
+      ..batches = [for (final r in rows) r.read(widget.code)];
+  }
+
+  /// A batch cost the shop's code can't read, else null.
+  String? problem() {
+    final c = widget.code;
+    if (c == null || mode == StockMode.none) return null;
+    for (final r in mode == StockMode.one ? rows.take(1) : rows) {
+      final e = c.decode(r.cost.text).error;
+      if (e != null) return e;
+    }
+    return null;
   }
 
   @override
@@ -54,9 +75,7 @@ class StockEditorState extends State<StockEditor> {
         ),
         const SizedBox(height: 6),
         Text(
-          mode == StockMode.none
-              ? 'Only the product: stock is counted later at the shop.'
-              : 'Old stock the shop already has: no bill, no money, nothing owed.',
+          mode == StockMode.none ? 'Only the product: stock is counted later at the shop.' : 'Old stock the shop already has: no bill, no money, nothing owed.',
           style: TextStyle(color: c.mutedForeground, fontSize: 13),
         ),
         for (final (i, r) in shown.indexed)
@@ -89,7 +108,7 @@ class StockEditorState extends State<StockEditor> {
                   Row(
                     children: [
                       Expanded(
-                        child: KsField(label: 'Cost (blank = product\'s)', controller: r.cost, kind: FieldKind.number),
+                        child: CostField(label: 'Cost (blank = product\'s)', controller: r.cost, code: widget.code),
                       ),
                       const SizedBox(width: 8),
                       Expanded(

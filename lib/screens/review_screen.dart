@@ -146,11 +146,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
           const SizedBox(height: 8),
           Expanded(
             child: list.isEmpty
-                ? const Empty(
-                    icon: Icons.fact_check_rounded,
-                    title: 'Nothing to review',
-                    sub: 'Pull a shop: what the catalogue hasn\'t got lands here.',
-                  )
+                ? const Empty(icon: Icons.fact_check_rounded, title: 'Nothing to review', sub: 'Pull a shop: what the catalogue hasn\'t got lands here.')
                 : ListView(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                     children: [
@@ -173,11 +169,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                                   onChanged: (v) => setState(() => v == true ? picked.add(r.uid) : picked.remove(r.uid)),
                                   title: Text('${r.data['name']}', style: const TextStyle(fontWeight: FontWeight.w600)),
                                   subtitle: Text(_line(r), maxLines: 2, overflow: TextOverflow.ellipsis),
-                                  secondary: IconButton(
-                                    icon: const Icon(Icons.edit_outlined),
-                                    tooltip: 'Fix and accept',
-                                    onPressed: () => editOne(r),
-                                  ),
+                                  secondary: IconButton(icon: const Icon(Icons.edit_outlined), tooltip: 'Fix and accept', onPressed: () => editOne(r)),
                                 ),
                               ],
                             ],

@@ -144,10 +144,7 @@ Future<Shop?> editShop(BuildContext context, Shop? s) async {
             TextField(
               controller: address,
               keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                labelText: 'Address',
-                helperText: 'e.g. http://100.101.5.2:3000 (Tailscale) or http://192.168.1.20:3000',
-              ),
+              decoration: const InputDecoration(labelText: 'Address', helperText: 'e.g. http://100.101.5.2:3000 (Tailscale) or http://192.168.1.20:3000'),
             ),
             if (secrets.length > 1) ...[
               const SizedBox(height: 10),

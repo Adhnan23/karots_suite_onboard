@@ -119,11 +119,7 @@ class _AlternativesScreenState extends State<AlternativesScreen> {
             )
           : null,
       body: list.isEmpty
-          ? Empty(
-              icon: Icons.swap_horiz_rounded,
-              title: 'No groups yet',
-              sub: on ? 'Make one, or copy one from another shop.' : 'Connect to make groups here.',
-            )
+          ? Empty(icon: Icons.swap_horiz_rounded, title: 'No groups yet', sub: on ? 'Make one, or copy one from another shop.' : 'Connect to make groups here.')
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 160),
               children: [
