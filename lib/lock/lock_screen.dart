@@ -10,10 +10,24 @@ import '../suite/support_pin.dart';
 import '../theme/tokens.dart';
 import 'app_identity.dart';
 
+/// When the install ID's code was last entered on this phone (ISO time).
+const codeDayKey = 'code_at';
+
+/// The phone's own unlock opens the app only within 24 hours of the code being
+/// entered here: a fresh install or cleared storage needs the code, and so does
+/// each new 24 hours, so a copied APK can't be opened with someone else's phone.
+/// A clock set back doesn't stretch it.
+bool phoneUnlockAllowed(String? codeAt, DateTime now) {
+  final at = DateTime.tryParse(codeAt ?? '');
+  if (at == null || now.isBefore(at)) return false;
+  return now.difference(at) < const Duration(hours: 24);
+}
+
 /// Opens with this hour's code for the app's own install ID (from the PIN app),
 /// like a shop's system user or the Demo Room. Nothing to set up first: support
-/// secrets are added afterwards, under the key icon. On Android the phone's own
-/// unlock opens it too (fingerprint, or its PIN / pattern).
+/// secrets are added afterwards, under the key icon. On Android, for 24 hours
+/// after the code, the phone's own unlock opens it too (fingerprint, or its
+/// PIN / pattern).
 class LockScreen extends StatefulWidget {
   const LockScreen({super.key, required this.store, required this.onOpen});
   final KeyStore store;
@@ -32,13 +46,18 @@ class _LockScreenState extends State<LockScreen> {
   @override
   void initState() {
     super.initState();
-    if (Platform.isAndroid) {
-      _auth.isDeviceSupported().then((ok) {
-        if (!mounted || !ok) return;
-        setState(() => _canUnlock = true);
-        _bio();
-      }, onError: (_) {});
+    if (Platform.isAndroid) _offerPhoneUnlock();
+  }
+
+  Future<void> _offerPhoneUnlock() async {
+    if (!phoneUnlockAllowed(await widget.store.read(codeDayKey), DateTime.now())) return; // the code first, every 24 hours
+    try {
+      if (!await _auth.isDeviceSupported() || !mounted) return;
+    } catch (_) {
+      return;
     }
+    setState(() => _canUnlock = true);
+    _bio();
   }
 
   /// Fingerprint, or the phone's own PIN / pattern when there's none.
@@ -53,8 +72,11 @@ class _LockScreenState extends State<LockScreen> {
     }
   }
 
-  void _go() {
-    if (validPin(_seed, code.text, DateTime.now())) return widget.onOpen();
+  Future<void> _go() async {
+    if (validPin(_seed, code.text, DateTime.now())) {
+      await widget.store.write(codeDayKey, DateTime.now().toIso8601String());
+      return widget.onOpen();
+    }
     setState(() => error = 'That isn\'t this hour\'s code');
     code.clear();
   }
