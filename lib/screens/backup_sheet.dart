@@ -16,10 +16,11 @@ import 'wipe_sheet.dart';
 Future<void> showBackup(BuildContext context) => showModalBottomSheet(
   context: context,
   showDragHandle: true,
+  isScrollControlled: true, // taller than a small phone: it scrolls
   builder: (ctx) {
     final c = KsTokens.of(ctx);
     final app = AppScope.of(context);
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
