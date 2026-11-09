@@ -34,4 +34,10 @@ class Secrets {
     if (list.isEmpty) return '';
     return (list.where((x) => x.name == s.secretName).firstOrNull ?? list.first).secret;
   }
+
+  /// Forgets every support secret on this device (they're never in a backup).
+  Future<void> clear() async {
+    await save([]);
+    await store.write(supportSecretKey, '');
+  }
 }

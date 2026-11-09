@@ -15,6 +15,7 @@ import 'package:karots_suite_onboard/data/models.dart';
 import 'package:karots_suite_onboard/input/cost_code.dart';
 import 'package:karots_suite_onboard/screens/cost_code_sheet.dart';
 import 'package:karots_suite_onboard/screens/quick_add_screen.dart';
+import 'package:karots_suite_onboard/screens/wipe_sheet.dart';
 import 'package:karots_suite_onboard/screens/alternatives_screen.dart';
 import 'package:karots_suite_onboard/screens/catalog_screen.dart';
 import 'package:karots_suite_onboard/screens/dupes_screen.dart';
@@ -189,6 +190,7 @@ void main() {
         ),
       ),
       'costcode': _Open((c) => editCostCode(c, shop.costCode)),
+      'wipe': _Open((c) => showWipe(c)),
     };
     // typed into a screen before its picture
     final typing = <String, Map<String, String>>{

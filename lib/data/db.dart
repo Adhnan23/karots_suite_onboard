@@ -257,4 +257,64 @@ class Db {
     for (final r in await raw.query('pending', where: 'shop_uid = ?', whereArgs: [shopUid], orderBy: 'created_at')) PendingOp.fromRow(r),
   ];
   Future<void> donePending(String uid) => raw.delete('pending', where: 'uid = ?', whereArgs: [uid]);
+  Future<int> pendingCount() async => sq.Sqflite.firstIntValue(await raw.rawQuery('SELECT count(*) FROM pending')) ?? 0;
+
+  // ---- wipe ----
+
+  /// How many of each a wipe would remove, for its page.
+  Future<({int products, int suppliers, int review, int shops, int pending})> counts() async {
+    Future<int> n(String sql) async => sq.Sqflite.firstIntValue(await raw.rawQuery(sql)) ?? 0;
+    return (
+      products: await n('SELECT count(*) FROM catalog_products'),
+      suppliers: await n('SELECT count(*) FROM catalog_suppliers'),
+      review: await n('SELECT count(*) FROM review'),
+      shops: await n('SELECT count(*) FROM shops'),
+      pending: await n('SELECT count(*) FROM pending'),
+    );
+  }
+
+  /// Clears what's ticked, in one go: catalogue products (with their barcodes,
+  /// packs, details and supplier offers; the shops' own lists stay, unlinked),
+  /// suppliers, the review list (so the next pull lists things again), shops
+  /// (with their lists and changes waiting to push). Deletions are recorded like
+  /// any other, so a team device follows.
+  Future<({int products, int suppliers, int review, int shops})> wipe({
+    bool products = false,
+    bool suppliers = false,
+    bool review = false,
+    bool shops = false,
+  }) async {
+    final c = await counts();
+    await _w(
+      raw.transaction((t) async {
+        final at = DateTime.now();
+        Future<void> mark(String table, String kind) async {
+          for (final r in await t.query(table, columns: ['uid'])) {
+            await _mark(t, kind, r['uid'] as String, at);
+          }
+        }
+
+        if (products) {
+          await mark('catalog_products', 'product');
+          for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields', 'catalog_offers', 'catalog_products']) {
+            await t.delete(tb);
+          }
+          await t.update('shop_products', {'catalog_uid': null});
+        }
+        if (suppliers) {
+          await mark('catalog_suppliers', 'supplier');
+          await t.delete('catalog_suppliers');
+          await t.delete('catalog_offers');
+        }
+        if (review) await t.delete('review');
+        if (shops) {
+          await mark('shops', 'shop');
+          for (final tb in ['shop_products', 'pending', 'shops']) {
+            await t.delete(tb);
+          }
+        }
+      }),
+    );
+    return (products: products ? c.products : 0, suppliers: suppliers ? c.suppliers : 0, review: review ? c.review : 0, shops: shops ? c.shops : 0);
+  }
 }

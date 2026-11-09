@@ -1,18 +1,16 @@
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../data/backup.dart';
 import '../state.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
+import 'backup_file.dart';
 import 'sync_screen.dart';
 import 'team_screen.dart';
+import 'wipe_sheet.dart';
 
 /// Export the app's data to a file, or merge one in (another device's, or a backup).
 Future<void> showBackup(BuildContext context) => showModalBottomSheet(
@@ -66,27 +64,9 @@ Future<void> showBackup(BuildContext context) => showModalBottomSheet(
             icon: const Icon(Icons.upload_file_rounded),
             label: const Text('Export backup'),
             onPressed: () async {
-              final text = await exportBackup(app.db);
-              final name = 'karots-onboard-backup-${DateFormat('yyyyMMdd-HHmm').format(DateTime.now())}.json';
-              final bytes = Uint8List.fromList(utf8.encode(text));
-              if (Platform.isAndroid) {
-                await SharePlus.instance.share(
-                  ShareParams(
-                    files: [XFile.fromData(bytes, name: name, mimeType: 'application/json')],
-                    fileNameOverrides: [name],
-                  ),
-                );
-              } else {
-                final at = await getSaveLocation(
-                  suggestedName: name,
-                  acceptedTypeGroups: [
-                    const XTypeGroup(label: 'Backup', extensions: ['json']),
-                  ],
-                );
-                if (at == null) return;
-                await File(at.path).writeAsBytes(bytes);
-                if (ctx.mounted) toast(ctx, 'Saved $name');
-              }
+              final name = backupName(), text = await exportBackup(app.db);
+              if (!ctx.mounted) return;
+              if (await saveBackupFile(ctx, text, name) && ctx.mounted && !Platform.isAndroid) toast(ctx, 'Saved $name');
             },
           ),
           const SizedBox(height: 10),
@@ -105,6 +85,16 @@ Future<void> showBackup(BuildContext context) => showModalBottomSheet(
               app.changed();
               toast(ctx, 'Merged in: ${r.products} products, ${r.suppliers} suppliers, ${r.shops} shops changed or added');
               Navigator.pop(ctx);
+            },
+          ),
+          const SizedBox(height: 18),
+          TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: c.danger),
+            icon: const Icon(Icons.delete_forever_rounded),
+            label: const Text('Wipe…'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              showWipe(context);
             },
           ),
         ],
