@@ -27,7 +27,7 @@ class Db {
     path ??= p.join((await getApplicationSupportDirectory()).path, 'onboard.db');
     final raw = await f.openDatabase(
       path,
-      options: OpenDatabaseOptions(version: 6, onCreate: (d, _) => _create(d), onUpgrade: _upgrade),
+      options: OpenDatabaseOptions(version: 7, onCreate: (d, _) => _create(d), onUpgrade: _upgrade),
     );
     return Db._(raw);
   }
@@ -63,6 +63,7 @@ class Db {
       'CREATE TABLE pending(uid TEXT PRIMARY KEY, shop_uid TEXT, op TEXT, json TEXT, error TEXT, created_at TEXT, who TEXT NOT NULL DEFAULT \'\')',
       _deletedTable,
       _offersTable,
+      ..._childIndexes,
     ]) {
       await d.execute(s);
     }
@@ -73,6 +74,14 @@ class Db {
   static const _offersTable = '''CREATE TABLE catalog_offers(product_uid TEXT NOT NULL, supplier_uid TEXT NOT NULL, supplier_name TEXT,
        code TEXT, cost TEXT, price TEXT, updated_at TEXT, PRIMARY KEY(product_uid, supplier_uid))''';
 
+  /// A product's barcodes, packs and details by its uid, without reading every row
+  /// (a big catalogue would otherwise slow to a crawl).
+  static const _childIndexes = [
+    'CREATE INDEX IF NOT EXISTS catalog_barcodes_product ON catalog_barcodes(product_uid)',
+    'CREATE INDEX IF NOT EXISTS catalog_packs_product ON catalog_packs(product_uid)',
+    'CREATE INDEX IF NOT EXISTS catalog_fields_product ON catalog_fields(product_uid)',
+  ];
+
   static Future<void> _upgrade(Database d, int from, int to) async {
     if (from < 4) await d.execute(_offersTable);
     if (from < 5) {
@@ -81,6 +90,12 @@ class Db {
     }
     if (from < 2) await d.execute('ALTER TABLE shops ADD COLUMN secret_name TEXT');
     if (from < 3) await d.execute(_deletedTable);
+    if (from < 7) {
+      final have = {for (final r in await d.rawQuery("SELECT name FROM sqlite_master WHERE type = 'table'")) r['name']};
+      for (final s in _childIndexes) {
+        if (have.contains(RegExp(r' ON (\w+)\(').firstMatch(s)![1])) await d.execute(s);
+      }
+    }
     if (from < 6) {
       await d.execute('ALTER TABLE shops ADD COLUMN cost_code TEXT');
       await d.execute('ALTER TABLE shops ADD COLUMN cost_code_at TEXT');
@@ -102,24 +117,34 @@ class Db {
   // ---- catalogue products ----
 
   /// Saves a product; touch: false keeps its own last-changed time (a backup import).
-  Future<void> saveProduct(CatalogProduct x, {bool touch = true}) => _w(
-    raw.transaction((t) async {
-      if (touch) x.updatedAt = DateTime.now();
-      await t.insert('catalog_products', x.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
-      for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
-        await t.delete(tb, where: 'product_uid = ?', whereArgs: [x.uid]);
-      }
-      for (final (i, c) in x.allCodes.indexed) {
-        await t.insert('catalog_barcodes', {'product_uid': x.uid, 'code': c, 'pos': i});
-      }
-      for (final (i, k) in x.packs.indexed) {
-        await t.insert('catalog_packs', {'product_uid': x.uid, ...k.toMap(), 'pos': i});
-      }
-      for (final e in x.fields.entries) {
-        await t.insert('catalog_fields', {'product_uid': x.uid, 'label': e.key, 'value': e.value});
-      }
-    }),
-  );
+  Future<void> saveProduct(CatalogProduct x, {bool touch = true}) => saveProducts([x], touch: touch);
+
+  /// Saves many products in one go (an import): one transaction, one batch.
+  Future<void> saveProducts(List<CatalogProduct> list, {bool touch = true}) async {
+    if (list.isEmpty) return;
+    await _w(
+      raw.transaction((t) async {
+        final b = t.batch();
+        for (final x in list) {
+          if (touch) x.updatedAt = DateTime.now();
+          b.insert('catalog_products', x.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
+          for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
+            b.delete(tb, where: 'product_uid = ?', whereArgs: [x.uid]);
+          }
+          for (final (i, c) in x.allCodes.indexed) {
+            b.insert('catalog_barcodes', {'product_uid': x.uid, 'code': c, 'pos': i});
+          }
+          for (final (i, k) in x.packs.indexed) {
+            b.insert('catalog_packs', {'product_uid': x.uid, ...k.toMap(), 'pos': i});
+          }
+          for (final e in x.fields.entries) {
+            b.insert('catalog_fields', {'product_uid': x.uid, 'label': e.key, 'value': e.value});
+          }
+        }
+        await b.commit(noResult: true);
+      }),
+    );
+  }
 
   Future<void> deleteProduct(String uid) => _w(
     raw.transaction((t) async {
@@ -135,17 +160,21 @@ class Db {
     final rows = await raw.query('catalog_products', where: where, whereArgs: args, orderBy: 'name COLLATE NOCASE');
     if (rows.isEmpty) return [];
     final out = {for (final r in rows) r['uid'] as String: CatalogProduct.fromRow(r)};
+    // In batches: SQLite takes at most 32,766 values in one query (999 on older phones).
     final ids = out.keys.toList();
-    final q = List.filled(ids.length, '?').join(',');
-    for (final r in await raw.query('catalog_barcodes', where: 'product_uid IN ($q)', whereArgs: ids, orderBy: 'pos')) {
-      final x = out[r['product_uid']]!;
-      if (r['code'] != x.barcode) x.barcodes.add(r['code'] as String);
-    }
-    for (final r in await raw.query('catalog_packs', where: 'product_uid IN ($q)', whereArgs: ids, orderBy: 'pos')) {
-      out[r['product_uid']]!.packs.add(Pack.fromMap(r));
-    }
-    for (final r in await raw.query('catalog_fields', where: 'product_uid IN ($q)', whereArgs: ids)) {
-      out[r['product_uid']]!.fields[r['label'] as String] = r['value'] as String? ?? '';
+    for (var i = 0; i < ids.length; i += 500) {
+      final part = ids.sublist(i, i + 500 > ids.length ? ids.length : i + 500);
+      final q = List.filled(part.length, '?').join(',');
+      for (final r in await raw.query('catalog_barcodes', where: 'product_uid IN ($q)', whereArgs: part, orderBy: 'pos')) {
+        final x = out[r['product_uid']]!;
+        if (r['code'] != x.barcode) x.barcodes.add(r['code'] as String);
+      }
+      for (final r in await raw.query('catalog_packs', where: 'product_uid IN ($q)', whereArgs: part, orderBy: 'pos')) {
+        out[r['product_uid']]!.packs.add(Pack.fromMap(r));
+      }
+      for (final r in await raw.query('catalog_fields', where: 'product_uid IN ($q)', whereArgs: part)) {
+        out[r['product_uid']]!.fields[r['label'] as String] = r['value'] as String? ?? '';
+      }
     }
     return out.values.toList();
   }

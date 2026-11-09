@@ -54,24 +54,27 @@ Future<ImportResult> importBackup(Db db, String text) async {
   }
   final goneProducts = await db.deletedAt('product'), goneSuppliers = await db.deletedAt('supplier'), goneShops = await db.deletedAt('shop');
 
-  final match = await Matcher.load(db);
+  final ours = await db.products();
+  final match = Matcher(ours);
+  final byUid = {for (final p in ours) p.uid: p};
+  final save = <String, CatalogProduct>{}; // saved together at the end: one transaction for the whole file
   for (final j in (m['products'] as List? ?? [])) {
     final p = CatalogProduct.fromJson(j as Map);
     final gone = goneProducts[p.uid];
     if (gone != null && !p.updatedAt.isAfter(gone)) continue; // deleted here after its last change
-    final here = await db.product(p.uid) ?? match.find(codes: p.allCodes, name: p.name);
+    final here = byUid[p.uid] ?? match.find(codes: p.allCodes, name: p.name);
     if (here == null) {
-      await db.saveProduct(p, touch: false);
+      save[p.uid] = byUid[p.uid] = p;
       match.add(p);
-      products++;
     } else if (p.updatedAt.isAfter(here.updatedAt)) {
       final x = CatalogProduct.fromJson({...p.toJson(), 'uid': here.uid})
         ..kinds.addAll(here.kinds)
         ..sources.addAll(here.sources);
-      await db.saveProduct(x, touch: false);
-      products++;
+      save[x.uid] = byUid[x.uid] = x;
     }
   }
+  await db.saveProducts(save.values.toList(), touch: false);
+  products = save.length;
 
   final have = {for (final x in await db.suppliers()) normName(x.name)};
   for (final r in (m['suppliers'] as List? ?? [])) {
