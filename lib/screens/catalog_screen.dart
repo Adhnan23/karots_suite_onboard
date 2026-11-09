@@ -3,21 +3,16 @@ import 'package:flutter/material.dart';
 import '../data/drafts.dart';
 import '../data/models.dart';
 import '../state.dart';
-import '../sync/match.dart';
+import '../sync/search.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
 import '../sync/variant.dart';
 import 'identify_sheet.dart';
 import 'product_form.dart';
 
-/// Search by name or any barcode; kind: only products seen in that kind of shop.
-List<CatalogProduct> filterCatalog(List<CatalogProduct> all, String q, String? kind) {
-  final n = normName(q);
-  return [
-    for (final p in all)
-      if ((kind == null || p.kinds.contains(kind)) && (n.isEmpty || normName(p.name).contains(n) || p.allCodes.any((c) => c.contains(q.trim())))) p,
-  ];
-}
+/// Search every field, typos allowed (searchProducts); kind: only products seen in that kind of shop.
+List<CatalogProduct> filterCatalog(List<CatalogProduct> all, String q, String? kind) =>
+    searchProducts([for (final p in all) if (kind == null || p.kinds.contains(kind)) p], q);
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
@@ -70,7 +65,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Search by name or barcode'),
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Search name, generic, company, barcode…'),
               onChanged: (v) => setState(() => q = v),
             ),
           ),

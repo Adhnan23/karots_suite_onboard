@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/drafts.dart';
 import '../data/models.dart';
+import '../sync/search.dart';
 import '../input/cost_code.dart';
 import '../flavor.dart';
 import '../input/supplier_field.dart';
@@ -344,11 +345,8 @@ class _CatalogPickState extends State<_CatalogPick> {
   String q = '';
   @override
   Widget build(BuildContext context) {
-    final n = normName(q);
-    final list = [
-      for (final p in widget.all)
-        if (n.isEmpty || normName(p.name).contains(n) || p.allCodes.any((x) => x.contains(q.trim()))) p,
-    ]..sort((a, b) => (b.kinds.contains(widget.kind) ? 1 : 0) - (a.kinds.contains(widget.kind) ? 1 : 0));
+    final found = searchProducts(widget.all, q); // best first; this shop's kind first, keeping that order
+    final list = [...found.where((p) => p.kinds.contains(widget.kind)), ...found.where((p) => !p.kinds.contains(widget.kind))];
     return SizedBox(
       height: MediaQuery.sizeOf(context).height * .8,
       child: Column(
@@ -357,7 +355,7 @@ class _CatalogPickState extends State<_CatalogPick> {
             padding: const EdgeInsets.all(16),
             child: TextField(
               autofocus: true,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Name or barcode'),
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Name, generic, company or barcode'),
               onChanged: (v) => setState(() => q = v),
             ),
           ),
