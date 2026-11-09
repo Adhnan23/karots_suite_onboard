@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/drafts.dart';
 import '../data/models.dart';
+import '../input/cost_code.dart';
 import '../flavor.dart';
 import '../input/supplier_field.dart';
 import '../state.dart';
@@ -94,6 +95,8 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
 
   Future<void> save() async {
     final app = AppScope.of(context);
+    final problem = form.currentState!.problem();
+    if (problem != null) return toast(context, problem, error: true);
     final p = form.currentState!.read();
     if (p.name.isEmpty) return toast(context, 'Give it a name', error: true);
     stock.currentState?.apply();
@@ -215,8 +218,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
             ],
           ),
           actions: [
-            if (isNew)
-              TextButton.icon(onPressed: pickFromCatalogue, icon: const Icon(Icons.inventory_2_outlined), label: const Text('From catalogue')),
+            if (isNew) TextButton.icon(onPressed: pickFromCatalogue, icon: const Icon(Icons.inventory_2_outlined), label: const Text('From catalogue')),
             if (!isNew)
               IconButton(
                 tooltip: 'Disable in this shop',
@@ -287,6 +289,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
                 fieldLabels: labels,
                 categories: [for (final n in cats) _path(cats, n as Map)],
                 units: [for (final u in (s.snapshot['units'] as List? ?? [])) '${(u as Map)['abbreviation']}'],
+                costCode: codeFor(s),
               ),
               const SizedBox(height: 12),
               Section(
@@ -321,9 +324,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> {
           onPressed: busy ? null : save,
           backgroundColor: c.brand,
           foregroundColor: c.brandForeground,
-          icon: busy
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Icon(Icons.cloud_upload_rounded),
+          icon: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.cloud_upload_rounded),
           label: Text(AppScope.of(context).connected(s) ? (isNew ? 'Put in ${s.name}' : 'Save in ${s.name}') : 'Save to push later'),
         ),
       ),

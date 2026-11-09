@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import '../data/models.dart';
 import '../input/barcodes_editor.dart';
 import '../input/category_field.dart';
+import '../input/cost_code.dart';
 import '../input/field_kind.dart';
 import '../input/ks_field.dart';
+import '../input/price_fields.dart';
 import '../input/supplier_field.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
@@ -15,7 +17,7 @@ import 'packs_editor.dart';
 /// The product's own details, shared by the catalogue and a shop's editor. Every
 /// field reads from a photo too. fieldLabels: the custom fields to show.
 class ProductForm extends StatefulWidget {
-  const ProductForm({super.key, required this.product, this.fieldLabels = const [], this.categories, this.units = const [], this.suppliers});
+  const ProductForm({super.key, required this.product, this.fieldLabels = const [], this.categories, this.units = const [], this.suppliers, this.costCode});
   final CatalogProduct product;
   final List<String> fieldLabels;
 
@@ -27,6 +29,9 @@ class ProductForm extends StatefulWidget {
   /// The catalogue's suppliers, to pick the product's usual one (catalogue only;
   /// a shop's editor has its own).
   final List<CatSupplier>? suppliers;
+
+  /// The shop's cost letters (Onboard at a shop; null in the catalogue and Shelf).
+  final CostCode? costCode;
   @override
   State<ProductForm> createState() => ProductFormState();
 }
@@ -39,8 +44,7 @@ class ProductFormState extends State<ProductForm> {
   final extra = GlobalKey<BarcodesEditorState>();
   late final category = TextEditingController(text: p.category);
   late final unit = TextEditingController(text: p.unit);
-  late final cost = TextEditingController(text: p.cost);
-  late final selling = TextEditingController(text: p.selling);
+  final prices = GlobalKey<PriceFieldsState>();
   late final wholesale = TextEditingController(text: p.wholesale);
   late final warranty = TextEditingController(text: p.warrantyMonths == 0 ? '' : '${p.warrantyMonths}');
   late final fields = {
@@ -86,29 +90,35 @@ class ProductFormState extends State<ProductForm> {
     });
   }
 
+  /// Why the prices can't be saved yet (a cost the shop's code can't read), else null.
+  String? problem() => prices.currentState?.read().error;
+
   /// The product as edited (same uid).
-  CatalogProduct read() => CatalogProduct.fromJson({
-    ...p.toJson(),
-    'name': name.text.trim(),
-    'name_local': local.text.trim(),
-    'barcode': barcode.text.trim(),
-    'category': category.text.trim(),
-    'unit': unit.text.trim().isEmpty ? 'pcs' : unit.text.trim(),
-    'cost': cost.text.trim(),
-    'selling': selling.text.trim(),
-    'wholesale': wholesale.text.trim(),
-    'warranty_months': int.tryParse(warranty.text.trim()) ?? 0,
-    'supplier': widget.suppliers == null ? p.supplier : _supplierName,
-    'barcodes': [
-      for (final b in extra.currentState?.codes ?? p.barcodes)
-        if (b != barcode.text.trim()) b,
-    ],
-    'packs': [for (final k in packs.currentState?.read() ?? p.packs) k.toMap()],
-    'fields': {
-      for (final e in fields.entries)
-        if (e.value.text.trim().isNotEmpty) e.key: e.value.text.trim(),
-    },
-  });
+  CatalogProduct read() {
+    final pr = prices.currentState?.read();
+    return CatalogProduct.fromJson({
+      ...p.toJson(),
+      'name': name.text.trim(),
+      'name_local': local.text.trim(),
+      'barcode': barcode.text.trim(),
+      'category': category.text.trim(),
+      'unit': unit.text.trim().isEmpty ? 'pcs' : unit.text.trim(),
+      'cost': pr?.cost ?? p.cost,
+      'selling': pr?.selling ?? p.selling,
+      'wholesale': wholesale.text.trim(),
+      'warranty_months': int.tryParse(warranty.text.trim()) ?? 0,
+      'supplier': widget.suppliers == null ? p.supplier : _supplierName,
+      'barcodes': [
+        for (final b in extra.currentState?.codes ?? p.barcodes)
+          if (b != barcode.text.trim()) b,
+      ],
+      'packs': [for (final k in packs.currentState?.read() ?? p.packs) k.toMap()],
+      'fields': {
+        for (final e in fields.entries)
+          if (e.value.text.trim().isNotEmpty) e.key: e.value.text.trim(),
+      },
+    });
+  }
 
   Widget _pair(Widget a, Widget b) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,10 +174,7 @@ class ProductFormState extends State<ProductForm> {
       Section(
         title: 'Prices',
         children: [
-          _pair(
-            KsField(label: 'Cost price', controller: cost, kind: FieldKind.number),
-            KsField(label: 'Selling price', controller: selling, kind: FieldKind.number),
-          ),
+          PriceFields(key: prices, cost: p.cost, selling: p.selling, code: widget.costCode),
           const SizedBox(height: 10),
           _pair(
             KsField(label: 'Wholesale price', controller: wholesale, kind: FieldKind.number),

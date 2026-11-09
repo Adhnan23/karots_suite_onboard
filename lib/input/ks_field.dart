@@ -21,7 +21,13 @@ class KsField extends StatelessWidget {
     this.onSubmitted,
     this.focusNode,
     this.autofocus = false,
+    this.errorText,
+    this.keyboard,
   });
+  final String? errorText;
+
+  /// Overrides the keyboard [kind] picks (a coded cost takes letters).
+  final TextInputType? keyboard;
   final ValueChanged<String>? onSubmitted;
   final FocusNode? focusNode;
   final bool autofocus;
@@ -42,14 +48,17 @@ class KsField extends StatelessWidget {
       onSubmitted: onSubmitted,
       focusNode: focusNode,
       autofocus: autofocus,
-      keyboardType: switch (kind) {
-        FieldKind.number => const TextInputType.numberWithOptions(decimal: true),
-        FieldKind.date => TextInputType.datetime,
-        _ => TextInputType.text,
-      },
+      keyboardType:
+          keyboard ??
+          switch (kind) {
+            FieldKind.number => const TextInputType.numberWithOptions(decimal: true),
+            FieldKind.date => TextInputType.datetime,
+            _ => TextInputType.text,
+          },
       decoration: InputDecoration(
         labelText: label,
         helperText: helper,
+        errorText: errorText,
         hintText: kind == FieldKind.date ? 'YYYY-MM-DD' : null,
         suffixIcon: Row(
           mainAxisSize: MainAxisSize.min,
