@@ -37,7 +37,7 @@ Some big shops write the cost on their goods as letters so customers can't read 
 
 Medicines and other boxed goods show the price for the box, not for one piece. The shop sells pieces.
 
-- Next to the cost and selling price (Quick add and the product's Prices), a **"÷ how many"** divide helper (only for dividing; works for any box, strip, packet…): the
+- Next to the cost and selling price (Quick add and the product's Prices), a **"÷ how many"** divide helper (only for dividing; works for any box, strip, packet…; **totally optional**: off by default, the boxes work exactly as today unless it is used): the
   user types the box's cost / selling price as printed plus how many pieces are in it, and the field's value becomes
   the per-piece price (box ÷ N). The result is shown before saving.
 - One N per product form / Quick add entry applies to both cost and selling (they come off the same box).
