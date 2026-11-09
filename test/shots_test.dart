@@ -12,6 +12,9 @@ import 'package:karots_suite_onboard/data/db.dart';
 import 'package:karots_suite_onboard/screens/suppliers_screen.dart';
 import 'package:karots_suite_onboard/main.dart';
 import 'package:karots_suite_onboard/data/models.dart';
+import 'package:karots_suite_onboard/input/cost_code.dart';
+import 'package:karots_suite_onboard/screens/cost_code_sheet.dart';
+import 'package:karots_suite_onboard/screens/quick_add_screen.dart';
 import 'package:karots_suite_onboard/screens/alternatives_screen.dart';
 import 'package:karots_suite_onboard/screens/catalog_screen.dart';
 import 'package:karots_suite_onboard/screens/dupes_screen.dart';
@@ -44,6 +47,7 @@ void main() {
     sqfliteFfiInit();
     final db = (await t.runAsync(() => Db.openWith(path: inMemoryDatabasePath, factory: databaseFactoryFfi)))!;
     final shop = Shop(
+      costCodeJson: CostCode({0: 'ix', 1: 'r', 2: 'e', 3: 's', 4: 'u', 5: 'l', 6: 'o', 7: 'n', 8: 'a', 9: 'b'}).toJson(),
       name: 'Iman Pharmacy',
       kind: 'pharmacy',
       address: 'http://100.101.5.2:3000',
@@ -176,6 +180,19 @@ void main() {
       'alternatives': AlternativesScreen(shop: shop),
       'suppliers': const SuppliersScreen(),
       'home': const AppHome(),
+      'quickadd': _Open(
+        (c) => quickAddSheet(
+          c,
+          CatalogProduct(name: 'Panadol 500mg Tablets', supplier: 'Hemas Pharma'),
+          shopName: shop.name,
+          code: shop.costCode,
+        ),
+      ),
+      'costcode': _Open((c) => editCostCode(c, shop.costCode)),
+    };
+    // typed into a screen before its picture
+    final typing = <String, Map<String, String>>{
+      'quickadd': {'Cost price': 'ESX', 'Selling price': '300', '÷ how many': '10', 'Quantity': '40'},
     };
     for (final size in [const Size(390, 844), const Size(1280, 800)]) {
       for (final b in Brightness.values) {
@@ -194,6 +211,10 @@ void main() {
           await t.pump();
           await t.runAsync(() => Future.delayed(const Duration(milliseconds: 100)));
           await t.pump();
+          for (final f in (typing[e.key] ?? {}).entries) {
+            await t.enterText(find.widgetWithText(TextField, f.key), f.value);
+          }
+          await t.pumpAndSettle();
           if (dir == null) continue;
           final img = await t.runAsync(() async {
             final i = await (key.currentContext!.findRenderObject() as RenderRepaintBoundary).toImage(pixelRatio: 1.5);
@@ -206,4 +227,23 @@ void main() {
     }
     await t.runAsync(() => db.close());
   }, skip: dir == null);
+}
+
+/// A blank page that opens a sheet on its first frame (sheets have no page of their own).
+class _Open extends StatefulWidget {
+  const _Open(this.open);
+  final Future<Object?> Function(BuildContext) open;
+  @override
+  State<_Open> createState() => _OpenState();
+}
+
+class _OpenState extends State<_Open> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget.open(context));
+  }
+
+  @override
+  Widget build(BuildContext context) => const Scaffold();
 }
