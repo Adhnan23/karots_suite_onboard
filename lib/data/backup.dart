@@ -37,9 +37,12 @@ Future<ImportResult> importBackup(Db db, String text) async {
 
   // Deletions first: what the other device deleted goes here too, unless it was
   // changed here after that (a product's own time says so).
+  // Each kind's deleted list is read once and kept current here: re-reading it per entry made a file with
+  // 114 deletions take minutes when the list held 34,000 (a wiped catalogue).
+  final deleted = <String, Map<String, DateTime>>{};
   for (final r in (m['deleted'] as List? ?? [])) {
     final kind = '${r['kind']}', uid = '${r['uid']}', at = DateTime.parse('${r['at']}');
-    final mine = (await db.deletedAt(kind))[uid];
+    final mine = (deleted[kind] ??= await db.deletedAt(kind))[uid];
     if (mine != null && !at.isAfter(mine)) continue;
     if (kind == 'product') {
       final p = await db.product(uid);
@@ -51,6 +54,7 @@ Future<ImportResult> importBackup(Db db, String text) async {
       await db.deleteShop(uid);
     }
     await db.markDeleted(kind, uid, at);
+    deleted[kind]![uid] = at;
   }
   final goneProducts = await db.deletedAt('product'), goneSuppliers = await db.deletedAt('supplier'), goneShops = await db.deletedAt('shop');
 
