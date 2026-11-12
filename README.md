@@ -75,6 +75,11 @@ The app carries only its ID's seed (`lib/lock/app_identity.dart`), never the sec
     flutter build apk --release --flavor onboard -t lib/main.dart       # app-onboard-release.apk
     flutter build apk --release --flavor shelf -t lib/main_shelf.dart   # app-shelf-release.apk (Karots Shelf)
 
+Linux icon: KDE / GNOME on Wayland take an app's icon only from a launcher named after its id. Put
+`~/.local/share/applications/lk.karots.karots_suite_onboard.desktop` there with `Exec=` the bundle's
+`karots_suite_onboard`, `Icon=` its `data/flutter_assets/assets/icon.png` and
+`StartupWMClass=lk.karots.karots_suite_onboard`.
+
 The same code builds a second Android app, **Karots Suite Shelf** (home screen: Karots Shelf), for a
 shop's own staff: one shop, signed in with their own phone number and PIN, no catalogue
 (`lib/shelf/`, `isShelf` in `lib/flavor.dart`). Android needs `--flavor`; Linux and Windows are always Onboard. Windows: no camera or photo reading (a USB scanner types barcodes in).
