@@ -46,13 +46,16 @@ class _LockScreenState extends State<LockScreen> {
   @override
   void initState() {
     super.initState();
-    if (Platform.isAndroid || Platform.isWindows) _offerPhoneUnlock(); // Windows: Windows Hello (PIN, face, fingerprint)
+    _offerPhoneUnlock(); // Android: the screen lock; Windows: Windows Hello; Linux: the user's password (polkit)
   }
 
   Future<void> _offerPhoneUnlock() async {
     if (!phoneUnlockAllowed(await widget.store.read(codeDayKey), DateTime.now())) return; // the code first, every 24 hours
     try {
-      if (!await _auth.isDeviceSupported() || !mounted) return;
+      final ok = Platform.isLinux
+          ? (await Process.run('which', ['pkexec'])).exitCode == 0
+          : (Platform.isAndroid || Platform.isWindows) && await _auth.isDeviceSupported();
+      if (!ok || !mounted) return;
     } catch (_) {
       return;
     }
@@ -62,6 +65,13 @@ class _LockScreenState extends State<LockScreen> {
 
   /// Fingerprint, or the phone's own PIN / pattern when there's none.
   Future<void> _bio() async {
+    if (Platform.isLinux) {
+      // ponytail: polkit's own wording ("run /bin/true as the super user"); an Onboard polkit action needs a root-installed file
+      final r = await Process.run('pkexec', ['/bin/true']);
+      if (r.exitCode == 0) return widget.onOpen();
+      if (mounted && r.exitCode != 126) setState(() => error = 'Unlock didn\'t work. Use the code.'); // 126 = closed the box
+      return;
+    }
     try {
       if (await _auth.authenticate(localizedReason: 'Open Karots Onboard')) widget.onOpen();
     } on LocalAuthException catch (e) {
@@ -131,7 +141,7 @@ class _LockScreenState extends State<LockScreen> {
                   ),
                 const SizedBox(height: 18),
                 FilledButton(onPressed: _go, child: const Text('Open')),
-                if (_canUnlock) TextButton.icon(onPressed: _bio, icon: const Icon(Icons.fingerprint), label: Text(Platform.isWindows ? 'Unlock with Windows Hello' : 'Unlock with this phone')),
+                if (_canUnlock) TextButton.icon(onPressed: _bio, icon: const Icon(Icons.fingerprint), label: Text(Platform.isWindows ? 'Unlock with Windows Hello' : Platform.isLinux ? 'Unlock with your password' : 'Unlock with this phone')),
               ],
             ),
           ),
