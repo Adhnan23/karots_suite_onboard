@@ -46,7 +46,7 @@ class _LockScreenState extends State<LockScreen> {
   @override
   void initState() {
     super.initState();
-    if (Platform.isAndroid) _offerPhoneUnlock();
+    if (Platform.isAndroid || Platform.isWindows) _offerPhoneUnlock(); // Windows: Windows Hello (PIN, face, fingerprint)
   }
 
   Future<void> _offerPhoneUnlock() async {
@@ -66,9 +66,9 @@ class _LockScreenState extends State<LockScreen> {
       if (await _auth.authenticate(localizedReason: 'Open Karots Onboard')) widget.onOpen();
     } on LocalAuthException catch (e) {
       const quiet = {LocalAuthExceptionCode.userCanceled, LocalAuthExceptionCode.systemCanceled, LocalAuthExceptionCode.userRequestedFallback};
-      if (mounted && !quiet.contains(e.code)) setState(() => error = 'Phone unlock didn\'t work (${e.code.name}). Use the code.');
+      if (mounted && !quiet.contains(e.code)) setState(() => error = 'Unlock didn\'t work (${e.code.name}). Use the code.');
     } catch (e) {
-      if (mounted) setState(() => error = 'Phone unlock didn\'t work. Use the code.');
+      if (mounted) setState(() => error = 'Unlock didn\'t work. Use the code.');
     }
   }
 
@@ -131,7 +131,7 @@ class _LockScreenState extends State<LockScreen> {
                   ),
                 const SizedBox(height: 18),
                 FilledButton(onPressed: _go, child: const Text('Open')),
-                if (_canUnlock) TextButton.icon(onPressed: _bio, icon: const Icon(Icons.fingerprint), label: const Text('Unlock with this phone')),
+                if (_canUnlock) TextButton.icon(onPressed: _bio, icon: const Icon(Icons.fingerprint), label: Text(Platform.isWindows ? 'Unlock with Windows Hello' : 'Unlock with this phone')),
               ],
             ),
           ),
