@@ -134,7 +134,24 @@ Future<void> syncWithDevice(BuildContext context) async {
     ),
   );
   if (ok != true || !context.mounted) return;
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const PopScope(
+      canPop: false,
+      child: AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Expanded(child: Text('Syncing… a whole catalogue takes a few minutes. Keep the other device on its sync screen.')),
+          ],
+        ),
+      ),
+    ),
+  );
   final r = await guard(context, () => syncWith(app.db, address.text.trim(), code.text.trim()));
+  if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
   if (r == null || !context.mounted) return;
   app.changed();
   toast(

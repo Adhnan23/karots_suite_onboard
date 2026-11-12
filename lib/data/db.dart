@@ -114,6 +114,18 @@ class Db {
   Future<List<Map<String, Object?>>> deletions() => raw.query('deleted');
   Future<void> markDeleted(String kind, String uid, DateTime at) => _mark(raw, kind, uid, at);
 
+  /// Many at once (a backup import): one transaction, not one disk write each (34,000 took hours on Windows).
+  Future<void> markDeletedAll(List<(String kind, String uid, DateTime at)> list) async {
+    if (list.isEmpty) return;
+    await raw.transaction((t) async {
+      final b = t.batch();
+      for (final (kind, uid, at) in list) {
+        b.insert('deleted', {'kind': kind, 'uid': uid, 'at': at.toIso8601String()}, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      await b.commit(noResult: true);
+    });
+  }
+
   // ---- catalogue products ----
 
   /// Saves a product; touch: false keeps its own last-changed time (a backup import).

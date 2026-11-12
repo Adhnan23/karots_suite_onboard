@@ -40,6 +40,7 @@ Future<ImportResult> importBackup(Db db, String text) async {
   // Each kind's deleted list is read once and kept current here: re-reading it per entry made a file with
   // 114 deletions take minutes when the list held 34,000 (a wiped catalogue).
   final deleted = <String, Map<String, DateTime>>{};
+  final marks = <(String, String, DateTime)>[];
   for (final r in (m['deleted'] as List? ?? [])) {
     final kind = '${r['kind']}', uid = '${r['uid']}', at = DateTime.parse('${r['at']}');
     final mine = (deleted[kind] ??= await db.deletedAt(kind))[uid];
@@ -53,9 +54,10 @@ Future<ImportResult> importBackup(Db db, String text) async {
     } else if (kind == 'shop') {
       await db.deleteShop(uid);
     }
-    await db.markDeleted(kind, uid, at);
+    marks.add((kind, uid, at));
     deleted[kind]![uid] = at;
   }
+  await db.markDeletedAll(marks);
   final goneProducts = await db.deletedAt('product'), goneSuppliers = await db.deletedAt('supplier'), goneShops = await db.deletedAt('shop');
 
   final ours = await db.products();

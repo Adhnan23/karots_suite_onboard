@@ -89,7 +89,7 @@ Future<SyncResult> syncWith(Db db, String base, String code) async {
   final b = Uri.parse(url.endsWith('/') ? url.substring(0, url.length - 1) : url);
   final headers = {'x-sync-code': code.trim()};
   final mine = await exportBackup(db);
-  final res = await http.get(b.replace(path: '/backup'), headers: headers).timeout(const Duration(seconds: 30));
+  final res = await http.get(b.replace(path: '/backup'), headers: headers).timeout(const Duration(minutes: 5)); // a whole catalogue is ~30 MB
   if (res.statusCode == 403) throw SyncError('Wrong code: check the 6 digits on the other device');
   if (res.statusCode != 200) throw SyncError('The other device answered ${res.statusCode}');
   final got = await importBackup(db, utf8.decode(res.bodyBytes));
@@ -99,7 +99,7 @@ Future<SyncResult> syncWith(Db db, String base, String code) async {
         headers: {...headers, 'content-type': 'application/json'},
         body: mine,
       )
-      .timeout(const Duration(seconds: 60));
+      .timeout(const Duration(minutes: 10)); // the other device saves it all before answering
   if (sent.statusCode != 200) throw SyncError('The other device couldn\'t take ours (${sent.statusCode})');
   final m = jsonDecode(sent.body) as Map;
   return SyncResult(got, ImportResult(m['products'] as int, m['suppliers'] as int, m['shops'] as int));
