@@ -71,15 +71,14 @@ The app carries only its ID's seed (`lib/lock/app_identity.dart`), never the sec
 
 ## Build
 
-    flutter build linux          # build/linux/x64/release/bundle/
-    flutter build windows        # on Windows; or GitHub Actions → Windows build (no install here)
-    flutter build apk --release --flavor onboard -t lib/main.dart       # app-onboard-release.apk
-    flutter build apk --release --flavor shelf -t lib/main_shelf.dart   # app-shelf-release.apk (Karots Shelf)
+    make                 # both APKs + both Linux apps → dist/ (one at a time; see the Makefile)
+    make apk             # dist/karots-onboard.apk, dist/karots-shelf.apk
+    make linux           # dist/linux/karots-onboard/, karots-shelf/ (+ .tar.gz)
+    make install-linux   # both in this PC's app menu with their icons (Wayland needs the launcher)
 
-Linux icon: KDE / GNOME on Wayland take an app's icon only from a launcher named after its id. Put
-`~/.local/share/applications/lk.karots.karots_suite_onboard.desktop` there with `Exec=` the bundle's
-`karots_suite_onboard`, `Icon=` its `data/flutter_assets/assets/icon.png` and
-`StartupWMClass=lk.karots.karots_suite_onboard`.
+Windows: push, then GitHub → Actions → Windows build → Artifacts (karots-onboard-windows,
+karots-shelf-windows). Karots Shelf on a desktop is built with `KS_SHELF=1` and
+`-t lib/main_shelf.dart`: its own name, id, green icon and data folder, so both live on one PC.
 
 The same code builds a second Android app, **Karots Suite Shelf** (home screen: Karots Shelf), for a
 shop's own staff: one shop, signed in with their own phone number and PIN, no catalogue
