@@ -17,7 +17,7 @@ class Db {
   static Future<Db> openWith({String? path, DatabaseFactory? factory}) async {
     var f = factory;
     if (f == null) {
-      if (Platform.isLinux) {
+      if (Platform.isLinux || Platform.isWindows) {
         sqfliteFfiInit();
         f = databaseFactoryFfi;
       } else {
