@@ -6,6 +6,13 @@ project(karots_suite_onboard LANGUAGES CXX)
 # the on-disk name of your application.
 set(BINARY_NAME "karots_suite_onboard")
 
+# KS_SHELF=1 in the environment builds Karots Shelf instead (lib/main_shelf.dart): its own
+# name, id, icon and data folder, so both can live on one computer. See the Makefile.
+if(DEFINED ENV{KS_SHELF})
+  set(BINARY_NAME "karots_shelf")
+  add_definitions(-DKS_SHELF)
+endif()
+
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)

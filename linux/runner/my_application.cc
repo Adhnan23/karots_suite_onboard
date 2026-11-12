@@ -20,6 +20,14 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
 }
 
 // Implements GApplication::activate.
+#ifdef KS_SHELF
+#define KS_TITLE "Karots Shelf"
+#define KS_ICON "icon_shelf.png"
+#else
+#define KS_TITLE "Karots Suite Onboard"
+#define KS_ICON "icon.png"
+#endif
+
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
@@ -45,11 +53,11 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "Karots Suite Onboard");
+    gtk_header_bar_set_title(header_bar, KS_TITLE);
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "Karots Suite Onboard");
+    gtk_window_set_title(window, KS_TITLE);
   }
 
   gtk_window_set_default_size(window, 1280, 720);
@@ -58,7 +66,7 @@ static void my_application_activate(GApplication* application) {
   g_autofree gchar* exe = g_file_read_link("/proc/self/exe", nullptr);
   if (exe != nullptr) {
     g_autofree gchar* dir = g_path_get_dirname(exe);
-    g_autofree gchar* icon = g_build_filename(dir, "data", "flutter_assets", "assets", "icon.png", nullptr);
+    g_autofree gchar* icon = g_build_filename(dir, "data", "flutter_assets", "assets", KS_ICON, nullptr);
     gtk_window_set_icon_from_file(window, icon, nullptr);
   }
 

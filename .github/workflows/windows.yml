@@ -1,15 +1,24 @@
-# Builds the Windows Onboard on GitHub's Windows machines (nothing to install here).
-# Actions → Windows build → the run → Artifacts → karots-onboard-windows (a zip:
-# unzip anywhere, run karots_suite_onboard.exe).
+# Builds both Windows apps on GitHub's Windows machines (nothing to install here).
+# Actions → Windows build → the run → Artifacts: karots-onboard-windows and
+# karots-shelf-windows (zips: unzip anywhere, run the .exe).
 name: Windows build
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths-ignore: ['**.md']
+    paths-ignore: ['**.md', 'Makefile']
 jobs:
   build:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - app: onboard
+            target: lib/main.dart
+            shelf: ''
+          - app: shelf
+            target: lib/main_shelf.dart
+            shelf: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -17,9 +26,13 @@ jobs:
           flutter-version: 3.47.9
           channel: stable
           cache: true
-      - run: flutter build windows --release
+      - name: flutter build windows
+        shell: bash
+        run: |
+          if [ -n "${{ matrix.shelf }}" ]; then export KS_SHELF=1; fi
+          flutter build windows --release -t ${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         with:
-          name: karots-onboard-windows
+          name: karots-${{ matrix.app }}-windows
           path: build/windows/x64/runner/Release/
           retention-days: 30

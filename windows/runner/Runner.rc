@@ -3,6 +3,14 @@
 #pragma code_page(65001)
 #include "resource.h"
 
+#ifdef KS_SHELF
+#define KS_NAME "Karots Shelf"
+#define KS_BIN "karots_shelf"
+#else
+#define KS_NAME "Karots Suite Onboard"
+#define KS_BIN "karots_suite_onboard"
+#endif
+
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -52,7 +60,11 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
+#ifdef KS_SHELF
+IDI_APP_ICON            ICON                    "resources\\app_icon_shelf.ico"
+#else
 IDI_APP_ICON            ICON                    "resources\\app_icon.ico"
+#endif
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -90,12 +102,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "lk.karots" "\0"
-            VALUE "FileDescription", "Karots Suite Onboard" "\0"
+            VALUE "FileDescription", KS_NAME "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "karots_suite_onboard" "\0"
+            VALUE "InternalName", KS_BIN "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 lk.karots. All rights reserved." "\0"
-            VALUE "OriginalFilename", "karots_suite_onboard.exe" "\0"
-            VALUE "ProductName", "Karots Suite Onboard" "\0"
+            VALUE "OriginalFilename", KS_BIN ".exe" "\0"
+            VALUE "ProductName", KS_NAME "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
