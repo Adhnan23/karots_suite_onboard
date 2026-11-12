@@ -82,7 +82,7 @@ karots-shelf-windows). Karots Shelf on a desktop is built with `KS_SHELF=1` and
 
 The same code builds a second Android app, **Karots Suite Shelf** (home screen: Karots Shelf), for a
 shop's own staff: one shop, signed in with their own phone number and PIN, no catalogue
-(`lib/shelf/`, `isShelf` in `lib/flavor.dart`). Android needs `--flavor`; Linux and Windows are always Onboard. Windows: no camera or photo reading (a USB scanner types barcodes in).
+(`lib/shelf/`, `isShelf` in `lib/flavor.dart`). Android needs `--flavor`; Linux and Windows need `KS_SHELF=1` for Shelf (above). Windows: no camera or photo reading (a USB scanner types barcodes in).
 
 ## Tests
 
