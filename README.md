@@ -32,8 +32,9 @@ ID's hourly code, like a shop's system user or the Demo Room: from the PIN app, 
 support secret(s) under the key icon on Shops: they stay in this device's secure storage
 and are never in a backup or a sync. To move them, use the share icon there (Send to
 another device): a copy sealed with a passphrase (AES-256-GCM, PBKDF2), which the other
-device opens with Add from another device. On Android the phone's own unlock opens the
-app too (fingerprint, or its PIN / pattern).
+device opens with Add from another device. For 24 hours after the code, the device's own lock
+opens the app too: Android's fingerprint / PIN / pattern, Windows Hello (needs a Windows PIN), or
+on Linux the user's password through polkit (any desktop with a polkit agent; without one, the code).
 
 The app carries only its ID's seed (`lib/lock/app_identity.dart`), never the secret.
 
