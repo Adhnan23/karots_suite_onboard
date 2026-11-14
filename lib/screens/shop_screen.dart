@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../data/backup.dart';
 import '../data/models.dart';
 import '../flavor.dart';
 import '../state.dart';
@@ -23,15 +24,25 @@ class ShopScreen extends StatefulWidget {
 }
 
 class _ShopScreenState extends State<ShopScreen> {
-  String step = '';
+  final pullStep = ValueNotifier<SyncStep?>(null);
+  bool pulling = false;
+
+  @override
+  void dispose() {
+    pullStep.dispose();
+    super.dispose();
+  }
+
   Shop get s => widget.shop;
 
   Future<void> doPull() async {
     final app = AppScope.of(context);
     final c = app.session(s);
     if (c == null || app.puller(s)?.running == true) return; // a background pull is on it
-    final r = await guard(context, () => pull(app.db, c, s, step: (x) => setState(() => step = x)));
-    setState(() => step = '');
+    setState(() => pulling = true);
+    final r = await guard(context, () => pull(app.db, c, s, step: pullStep));
+    pullStep.value = null;
+    if (mounted) setState(() => pulling = false);
     app.changed();
     if (r != null && mounted) {
       toast(
@@ -130,14 +141,19 @@ class _ShopScreenState extends State<ShopScreen> {
                       ),
                       const SizedBox(width: 6),
                       Expanded(
-                        child: Text(
-                          auto.error.isNotEmpty
-                              ? 'Auto-pull failed: ${auto.error}'
-                              : auto.running
-                              ? 'Pulling…'
-                              : 'Pulls by itself every 2 minutes${auto.last == null ? '' : ' · updated ${DateFormat('HH:mm').format(auto.last!)}'}',
-                          style: TextStyle(fontSize: 13, color: auto.error.isNotEmpty ? c.danger : c.mutedForeground),
-                        ),
+                        child: auto.running && auto.error.isEmpty
+                            ? StepLine(
+                                auto.step,
+                                idle: Text('Pulling…', style: TextStyle(fontSize: 13, color: c.mutedForeground)),
+                              )
+                            : Text(
+                                auto.error.isNotEmpty
+                                    ? 'Auto-pull failed: ${auto.error}'
+                                    : auto.running
+                                    ? 'Pulling…'
+                                    : 'Pulls by itself every 2 minutes${auto.last == null ? '' : ' · updated ${DateFormat('HH:mm').format(auto.last!)}'}',
+                                style: TextStyle(fontSize: 13, color: auto.error.isNotEmpty ? c.danger : c.mutedForeground),
+                              ),
                       ),
                     ],
                   ),
@@ -172,15 +188,16 @@ class _ShopScreenState extends State<ShopScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: on && step.isEmpty ? doPull : null,
-                        icon: step.isEmpty
+                        onPressed: on && !pulling ? doPull : null,
+                        icon: !pulling
                             ? const Icon(Icons.download_rounded)
                             : const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                        label: Text(step.isEmpty ? 'Pull' : step),
+                        label: Text(pulling ? 'Pulling…' : 'Pull'),
                       ),
                     ),
                   ],
                 ),
+                Padding(padding: const EdgeInsets.only(top: 10), child: StepLine(pullStep)),
               ],
             ),
             const SizedBox(height: 12),

@@ -114,13 +114,18 @@ class Db {
 
   // ---- deletions, so they travel to the other devices ----
 
-  Future<void> _mark(DatabaseExecutor t, String kind, String uid, [DateTime? at]) =>
-      t.insert('deleted', {'kind': kind, 'uid': uid, 'at': (at ?? DateTime.now()).toIso8601String(), 'changed_at': stamp()}, conflictAlgorithm: ConflictAlgorithm.replace);
+  Future<void> _mark(DatabaseExecutor t, String kind, String uid, [DateTime? at]) => t.insert('deleted', {
+    'kind': kind,
+    'uid': uid,
+    'at': (at ?? DateTime.now()).toIso8601String(),
+    'changed_at': stamp(),
+  }, conflictAlgorithm: ConflictAlgorithm.replace);
 
   /// When each product / supplier / shop was deleted here, by uid.
   Future<Map<String, DateTime>> deletedAt(String kind) async => {
     for (final r in await raw.query('deleted', where: 'kind = ?', whereArgs: [kind])) r['uid'] as String: DateTime.parse(r['at'] as String),
   };
+
   /// Every deletion, or only the ones that reached this device after since (a [stamp]).
   Future<List<Map<String, Object?>>> deletions({String? since}) => since == null
       ? raw.query('deleted', columns: ['kind', 'uid', 'at'])
@@ -256,6 +261,7 @@ class Db {
     }
     await _w(raw.insert('shops', {...s.toRow(), 'changed_at': stamp()}, conflictAlgorithm: ConflictAlgorithm.replace));
   }
+
   Future<void> deleteShop(String uid) => _w(
     raw.transaction((t) async {
       await t.delete('shops', where: 'uid = ?', whereArgs: [uid]);

@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:karots_suite_onboard/data/backup.dart';
 import 'package:karots_suite_onboard/data/db.dart';
 import 'package:karots_suite_onboard/data/models.dart';
 import 'package:karots_suite_onboard/suite/client.dart';
@@ -107,6 +109,14 @@ void main() {
     final again = await pull(db, SuiteClient(shop.url), s);
     expect(again.toReview, 0, reason: 'a second pull adds no duplicate review rows');
     expect((await db.reviews()).length, 2);
+  });
+
+  test('a pull tells its steps with numbers', () async {
+    final s = Shop(name: 'Iman', address: shop.url);
+    final step = ValueNotifier<SyncStep?>(null), said = <String>[];
+    step.addListener(() => said.add(step.value?.text ?? ''));
+    await pull(db, SuiteClient(shop.url), s, step: step);
+    expect(said, containsAllInOrder(['Reading the shop', 'Reading products', 'Matching 2 of 2 products', 'Reading suppliers']));
   });
 
   test('an older shop (no packs call, no ids in its sheet) still pulls', () async {

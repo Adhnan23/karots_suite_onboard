@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import '../data/backup.dart';
 
 import '../state.dart';
 import '../suite/client.dart';
@@ -221,4 +224,57 @@ Future<void> leaveEditor(BuildContext context, {required bool changed, void Func
     return;
   }
   if (!changed || await confirm(context, 'Leave without saving?', 'Your changes to this product will be lost.', yes: 'Discard')) nav.pop();
+}
+
+/// A long job's step: its words with numbers, and a bar (moving when it can't
+/// tell how far). Shows idle (or nothing) while no job runs.
+class StepLine extends StatelessWidget {
+  const StepLine(this.step, {super.key, this.idle});
+  final ValueListenable<SyncStep?> step;
+  final Widget? idle;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<SyncStep?>(
+    valueListenable: step,
+    builder: (context, v, _) {
+      if (v == null) return idle ?? const SizedBox.shrink();
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(v.text, style: TextStyle(fontSize: 13, color: KsTokens.of(context).mutedForeground)),
+          const SizedBox(height: 6),
+          LinearProgressIndicator(value: v.part),
+        ],
+      );
+    },
+  );
+}
+
+/// Runs a long job in a dialog that shows its steps with numbers, then closes it.
+/// Errors show as guard shows them (null comes back).
+Future<T?> withSteps<T>(BuildContext context, String title, Future<T> Function(ValueNotifier<SyncStep?> step) job, {String note = ''}) async {
+  final step = ValueNotifier<SyncStep?>(null);
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => PopScope(
+      canPop: false,
+      child: AlertDialog(
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            StepLine(step, idle: const LinearProgressIndicator()),
+            if (note.isNotEmpty) ...[const SizedBox(height: 14), Text(note)],
+          ],
+        ),
+      ),
+    ),
+  );
+  final r = await guard(context, () => job(step));
+  if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+  step.dispose();
+  return r;
 }

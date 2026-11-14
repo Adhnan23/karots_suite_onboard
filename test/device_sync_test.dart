@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:karots_suite_onboard/data/db.dart';
 import 'package:karots_suite_onboard/data/models.dart';
@@ -54,6 +55,32 @@ void main() {
 
     final quiet = await syncWith(phone, url, '123456', since: (await syncWith(phone, url, '123456', since: r.marks)).marks);
     expect((quiet.received, quiet.got.shops, quiet.sent.products), (0, 0, 0));
+    await host.stop();
+    await pc.close();
+    await phone.close();
+  });
+
+  test('a sync tells its steps with numbers, on both devices', () async {
+    final pc = await Db.openWith(path: inMemoryDatabasePath, factory: databaseFactoryFfi);
+    for (var i = 0; i < 3; i++) {
+      await pc.saveProduct(CatalogProduct(name: 'PC $i', barcode: 'p$i'));
+    }
+    final hostSteps = <String>[], steps = <String>[];
+    final hostStep = ValueNotifier<SyncStep?>(null);
+    hostStep.addListener(() => hostSteps.add(hostStep.value?.text ?? ''));
+    final host = await SyncHost.start(pc, port: 0, code: '123456', step: hostStep);
+    final phone = await Db.openWith(path: '${Directory.systemTemp.createTempSync('ph').path}/onboard.db', factory: databaseFactoryFfi);
+    await phone.saveProduct(CatalogProduct(name: 'Phone 1', barcode: 'f1'));
+    final step = ValueNotifier<SyncStep?>(null);
+    step.addListener(() => steps.add(step.value?.text ?? ''));
+
+    await syncWith(phone, 'http://127.0.0.1:${host.port}', '123456', step: step);
+    expect(steps, contains(matches(RegExp(r'^Receiving [\d.]+ of [\d.]+ MB$'))));
+    expect(steps, contains('Merging 3 of 3 products'));
+    expect(steps, contains(matches(RegExp(r'^Sending [\d.]+ of [\d.]+ MB$'))));
+    expect(steps, contains('The other device is saving it…'));
+    expect(hostSteps, contains('Merging 1 of 1 products'));
+    expect((step.value, hostStep.value), (null, null), reason: 'cleared when done');
     await host.stop();
     await pc.close();
     await phone.close();

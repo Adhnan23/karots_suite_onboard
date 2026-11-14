@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
+import '../data/backup.dart';
 import '../data/db.dart';
 import '../data/models.dart';
 import '../flavor.dart';
@@ -15,8 +18,8 @@ class PullResult {
 /// Reads a whole shop (signed in already): what it runs and its lists. Products
 /// and suppliers the catalogue knows are skipped (and linked); new ones wait in
 /// Review. The shop's own list is kept for editing and merging there.
-Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {void Function(String)? step}) async {
-  step?.call('Reading the shop');
+Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {ValueNotifier<SyncStep?>? step}) async {
+  step?.value = (text: 'Reading the shop', part: null);
   final me = await c.me();
   final has = me.plugins.contains;
   final fields = has('productplus') ? await c.fields() : <dynamic>[];
@@ -36,7 +39,7 @@ Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {void Function(String)?
     'ai': has('aicatalog') ? await c.aiSettings() : {},
   };
 
-  step?.call('Reading products');
+  step?.value = (text: 'Reading products', part: null);
   final rows = readProductSheet(await c.productsCsv(customFields: has('productplus')), labels);
   // An older shop (before 2026-11-08) has no packs call and no ids in its sheet: its
   // products come without packs, and can't be changed from here until it updates.
@@ -51,6 +54,7 @@ Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {void Function(String)?
   var known = 0, review = 0;
   final mine = <Map<String, Object?>>[];
   for (final (i, r) in rows.indexed) {
+    await tell(step, i, rows.length, 'Matching', 'products');
     final remoteId = r.id > 0 ? r.id : -(i + 1);
     final shopCost = r.product.cost; // the shop's own list here keeps it; the catalogue never does
     final p = r.product
@@ -93,6 +97,7 @@ Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {void Function(String)?
       'json': jsonEncode({...p.toJson(), 'cost': shopCost, 'openingQty': r.openingQty}),
     });
   }
+  if (rows.isNotEmpty) step?.value = (text: 'Matching ${rows.length} of ${rows.length} products', part: 1);
   await db.replaceShopProducts(shop.uid, mine);
 
   if (isShelf) {
@@ -101,7 +106,7 @@ Future<PullResult> pull(Db db, SuiteClient c, Shop shop, {void Function(String)?
     return PullResult(known, 0, 0, 0);
   }
 
-  step?.call('Reading suppliers');
+  step?.value = (text: 'Reading suppliers', part: null);
   final have = {for (final s in await db.suppliers()) normName(s.name)};
   var sKnown = 0, sReview = 0;
   for (final s in readSupplierSheet(await c.suppliersCsv())) {

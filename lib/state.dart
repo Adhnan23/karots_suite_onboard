@@ -99,13 +99,15 @@ class AppState extends ChangeNotifier {
     _live[s.uid] = s;
     _pullers.remove(s.uid)?.stop();
     // Work saved while out of reach goes first, then the pull brings the shop back.
-    _pullers[s.uid] =
-        AutoPuller(() async {
-            await flushPending(db, c, s);
-            await pull(db, c, s);
-          })
-          ..addListener(notifyListeners)
-          ..start();
+    late final AutoPuller p;
+    p = AutoPuller(() async {
+      p.step.value = (text: 'Sending saved work', part: null);
+      await flushPending(db, c, s);
+      await pull(db, c, s, step: p.step);
+    });
+    _pullers[s.uid] = p
+      ..addListener(notifyListeners)
+      ..start();
     notifyListeners();
     return c;
   }
@@ -138,23 +140,25 @@ class AppState extends ChangeNotifier {
     _sessions[s.uid] = c;
     _live[s.uid] = s;
     _pullers.remove(s.uid)?.stop();
+    late final AutoPuller p;
     Future<void> work() async {
+      p.step.value = (text: 'Sending saved work', part: null);
       await flushPending(db, c, s, who: who.phone);
-      await pull(db, c, s);
+      await pull(db, c, s, step: p.step);
     }
 
-    _pullers[s.uid] =
-        AutoPuller(() async {
-            try {
-              await work();
-            } on SuiteError catch (e) {
-              if (e.status != 401 || personPin == null) rethrow;
-              await c.signInPerson(who.phone, personPin!);
-              await work();
-            }
-          })
-          ..addListener(notifyListeners)
-          ..start();
+    p = AutoPuller(() async {
+      try {
+        await work();
+      } on SuiteError catch (e) {
+        if (e.status != 401 || personPin == null) rethrow;
+        await c.signInPerson(who.phone, personPin!);
+        await work();
+      }
+    });
+    _pullers[s.uid] = p
+      ..addListener(notifyListeners)
+      ..start();
     notifyListeners();
     return c;
   }

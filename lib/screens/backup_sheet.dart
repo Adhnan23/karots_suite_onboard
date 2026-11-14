@@ -81,7 +81,10 @@ Future<void> showBackup(BuildContext context) => showModalBottomSheet(
                 ],
               );
               if (f == null || !ctx.mounted) return;
-              final r = await guard(ctx, () async => importBackup(app.db, await f.readAsString()));
+              final r = await withSteps(ctx, 'Importing', (step) async {
+                step.value = (text: 'Reading ${f.name}', part: null);
+                return importBackup(app.db, await f.readAsString(), step: step);
+              });
               if (r == null || !ctx.mounted) return;
               app.changed();
               toast(ctx, 'Merged in: ${r.products} products, ${r.suppliers} suppliers, ${r.shops} shops changed or added');

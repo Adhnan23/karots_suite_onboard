@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import '../sync/match.dart';
 import 'db.dart';
 import 'models.dart';
@@ -28,6 +30,18 @@ Future<String> exportBackup(Db db, {String? since}) async {
   });
 }
 
+/// What a long job is doing, for the screen: words with numbers, and how far
+/// (0–1) when it can tell (null: a spinning bar).
+typedef SyncStep = ({String text, double? part});
+
+/// Every 500th item: says how far, and lets the screen draw (a 50,000-item loop
+/// would otherwise freeze the app until it ends).
+Future<void> tell(ValueNotifier<SyncStep?>? step, int i, int n, String what, [String unit = '']) async {
+  if (i % 500 != 0) return;
+  step?.value = (text: '$what $i of $n${unit.isEmpty ? '' : ' $unit'}', part: n == 0 ? null : i / n);
+  await Future<void>.delayed(Duration.zero);
+}
+
 class ImportResult {
   ImportResult(this.products, this.suppliers, this.shops, {this.received = 0, this.changes});
   final int products, suppliers, shops;
@@ -40,7 +54,7 @@ class ImportResult {
 /// Merges a backup in: what's missing is added; the same product (by id, barcode
 /// or name) takes the newer edit; a supplier already here (by name) stays; a shop
 /// takes the newer pull. Counts what changed.
-Future<ImportResult> importBackup(Db db, String text) async {
+Future<ImportResult> importBackup(Db db, String text, {ValueNotifier<SyncStep?>? step}) async {
   final m = jsonDecode(text);
   if (m is! Map || m['kind'] != 'karots_onboard.backup') throw const FormatException('That isn\'t a Karots Onboard backup');
   var products = 0, suppliers = 0, shops = 0;
@@ -51,7 +65,9 @@ Future<ImportResult> importBackup(Db db, String text) async {
   // 114 deletions take minutes when the list held 34,000 (a wiped catalogue).
   final deleted = <String, Map<String, DateTime>>{};
   final marks = <(String, String, DateTime)>[];
-  for (final r in (m['deleted'] as List? ?? [])) {
+  final dels = m['deleted'] as List? ?? [];
+  for (final (i, r) in dels.indexed) {
+    await tell(step, i, dels.length, 'Checking deletions');
     final kind = '${r['kind']}', uid = '${r['uid']}', at = DateTime.parse('${r['at']}');
     final mine = (deleted[kind] ??= await db.deletedAt(kind))[uid];
     if (mine != null && !at.isAfter(mine)) continue;
@@ -70,18 +86,29 @@ Future<ImportResult> importBackup(Db db, String text) async {
   await db.markDeletedAll(marks);
   final goneProducts = await db.deletedAt('product'), goneSuppliers = await db.deletedAt('supplier'), goneShops = await db.deletedAt('shop');
 
-  final ours = await db.products();
-  final match = Matcher(ours);
-  final byUid = {for (final p in ours) p.uid: p};
   final save = <String, CatalogProduct>{}; // saved together at the end: one transaction for the whole file
-  for (final j in (m['products'] as List? ?? [])) {
+  final list = m['products'] as List? ?? [];
+  // A big file reads the whole catalogue once. A small one (a team sync's few changes) looks
+  // each product up by id, and reads the catalogue only for one it doesn't know.
+  final byUid = <String, CatalogProduct>{};
+  Matcher? match;
+  Future<Matcher> matcher() async {
+    if (match != null) return match!;
+    final ours = await db.products();
+    byUid.addAll({for (final p in ours) p.uid: p, ...save});
+    return match = Matcher([...ours, ...save.values]);
+  }
+
+  if (list.length > 200) await matcher();
+  for (final (i, j) in list.indexed) {
+    await tell(step, i, list.length, 'Merging', 'products');
     final p = CatalogProduct.fromJson(j as Map);
     final gone = goneProducts[p.uid];
     if (gone != null && !p.updatedAt.isAfter(gone)) continue; // deleted here after its last change
-    final here = byUid[p.uid] ?? match.find(codes: p.allCodes, name: p.name);
+    final here = byUid[p.uid] ?? (match == null ? save[p.uid] ?? await db.product(p.uid) : null) ?? (await matcher()).find(codes: p.allCodes, name: p.name);
     if (here == null) {
       save[p.uid] = byUid[p.uid] = p;
-      match.add(p);
+      match?.add(p);
     } else if (p.updatedAt.isAfter(here.updatedAt)) {
       final x = CatalogProduct.fromJson({...p.toJson(), 'uid': here.uid})
         ..kinds.addAll(here.kinds)
@@ -89,6 +116,8 @@ Future<ImportResult> importBackup(Db db, String text) async {
       save[x.uid] = byUid[x.uid] = x;
     }
   }
+  if (list.isNotEmpty) step?.value = (text: 'Merging ${list.length} of ${list.length} products', part: 1);
+  if (save.length > 500) step?.value = (text: 'Saving ${save.length} products…', part: null);
   await db.saveProducts(save.values.toList(), touch: false);
   products = save.length;
 

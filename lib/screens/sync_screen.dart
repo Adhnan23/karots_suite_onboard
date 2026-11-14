@@ -67,8 +67,7 @@ class _SyncHostScreenState extends State<SyncHostScreen> {
           children: [
             if (error.isNotEmpty) Text(error, style: TextStyle(color: c.danger)),
             if (h == null && error.isEmpty) const LinearProgressIndicator(),
-            if (h != null && h.closed)
-              Text('Closed after 5 wrong codes. Go back and open it again for a new code.', style: TextStyle(color: c.danger)),
+            if (h != null && h.closed) Text('Closed after 5 wrong codes. Go back and open it again for a new code.', style: TextStyle(color: c.danger)),
             if (h != null && !h.closed) ...[
               Text('On the other device: Shops → Backup → Sync with a device, and type these.', style: TextStyle(color: c.mutedForeground)),
               const SizedBox(height: 16),
@@ -88,6 +87,11 @@ class _SyncHostScreenState extends State<SyncHostScreen> {
                     style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, letterSpacing: 6, color: c.foreground),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              StepLine(
+                h.step,
+                idle: Text('Waiting for the other device…', style: TextStyle(color: c.mutedForeground)),
               ),
               const SizedBox(height: 12),
               Text(
@@ -134,24 +138,12 @@ Future<void> syncWithDevice(BuildContext context) async {
     ),
   );
   if (ok != true || !context.mounted) return;
-  showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const PopScope(
-      canPop: false,
-      child: AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 20),
-            Expanded(child: Text('Syncing… a whole catalogue takes a few minutes. Keep the other device on its sync screen.')),
-          ],
-        ),
-      ),
-    ),
+  final r = await withSteps(
+    context,
+    'Syncing',
+    (step) => syncWith(app.db, address.text.trim(), code.text.trim(), step: step),
+    note: 'A whole catalogue takes a few minutes. Keep the other device on its sync screen.',
   );
-  final r = await guard(context, () => syncWith(app.db, address.text.trim(), code.text.trim()));
-  if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
   if (r == null || !context.mounted) return;
   app.changed();
   toast(

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../data/backup.dart';
+
 /// Pulls a connected shop by itself, so a team sees each other's work: every 2
 /// minutes and right after a push; never two at once; stops on disconnect. A
 /// failure is kept for the screen, never thrown.
@@ -13,6 +15,9 @@ class AutoPuller extends ChangeNotifier {
   bool running = false;
   DateTime? last;
   String error = '';
+
+  /// What the running pull is doing (null: none running); the pull fills it.
+  final step = ValueNotifier<SyncStep?>(null);
 
   void start() {
     _timer?.cancel();
@@ -37,6 +42,7 @@ class AutoPuller extends ChangeNotifier {
       error = e.toString().replaceFirst('Exception: ', '');
     } finally {
       running = false;
+      step.value = null;
       notifyListeners();
     }
   }

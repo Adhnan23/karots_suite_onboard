@@ -71,10 +71,13 @@ class TeamSync extends ChangeNotifier {
   Timer? _soon;
   final _peers = <String, Peer>{};
   bool syncing = false;
+
+  /// What a sync is doing now, either way (this device asking, or another one asking it).
+  final step = ValueNotifier<SyncStep?>(null);
   List<Peer> get peers => _peers.values.toList();
 
   Future<void> start() async {
-    final h = await SyncHost.start(db, port: port, code: key, maxWrong: null); // a 12-character key can't be guessed
+    final h = await SyncHost.start(db, port: port, code: key, maxWrong: null, step: step); // a 12-character key can't be guessed
     _host = h;
     port = h.port;
     if (discover) {
@@ -142,7 +145,7 @@ class TeamSync extends ChangeNotifier {
     notifyListeners();
     for (final p in peers) {
       try {
-        final r = await syncWith(db, '${p.address}:${p.port}', key, since: p.marks);
+        final r = await syncWith(db, '${p.address}:${p.port}', key, since: p.marks, step: step);
         p
           ..marks = r.marks
           ..lastSync = DateTime.now()
