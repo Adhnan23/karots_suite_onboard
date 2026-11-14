@@ -64,7 +64,8 @@ The app carries only its ID's seed (`lib/lock/app_identity.dart`), never the sec
 ## Team, backup and sync
 
 - **Team:** devices that join one team key keep the same catalogue, suppliers and shops
-  by themselves on the same Wi-Fi (every 2 minutes and soon after a change, while open).
+  by themselves on the same Wi-Fi (every 2 minutes and soon after a change, while open). The first sync after the app opens
+  sends everything; after that only what changed travels.
 - **Backup:** export a file of everything but the secrets; importing merges it.
 - **Sync with a device:** one-off, by address and a 6-digit code.
 - While connected to a shop, the app pulls it every 2 minutes and after each push.
