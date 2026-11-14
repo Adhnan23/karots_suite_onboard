@@ -6,25 +6,35 @@ import 'models.dart';
 
 /// The app's own data as one file: the catalogue's products and suppliers, and
 /// the shop profiles with their last pulls. Never the support secrets.
-Future<String> exportBackup(Db db) async {
+/// Everything, or (since: a [Db.stamp] this device gave earlier as 'changes') only what
+/// changed here after it: the team sync's way of not sending 50,000 products every time.
+/// Suppliers always go whole (few). 'changes' marks this export for the next one.
+Future<String> exportBackup(Db db, {String? since}) async {
+  final changes = Db.stamp(); // before reading: a change made while exporting goes next time too
+  final changed = since == null ? '1=1' : 'changed_at > ?', args = [?since];
   final shops = <Map<String, Object?>>[];
-  for (final s in await db.shops()) {
+  for (final s in await db.shops(where: changed, args: args)) {
     shops.add({...s.toRow(), 'products': await db.shopProducts(s.uid)});
   }
-  return const JsonEncoder.withIndent(' ').convert({
+  return (since == null ? const JsonEncoder.withIndent(' ') : const JsonEncoder()).convert({
     'kind': 'karots_onboard.backup',
     'schema': 1,
     'at': DateTime.now().toIso8601String(),
-    'products': [for (final p in await db.products()) p.toJson()],
+    'changes': changes,
+    'products': [for (final p in await db.products(where: changed, args: args)) p.toJson()],
     'suppliers': [for (final x in await db.suppliers()) x.toRow()],
     'shops': shops,
-    'deleted': await db.deletions(),
+    'deleted': await db.deletions(since: since),
   });
 }
 
 class ImportResult {
-  ImportResult(this.products, this.suppliers, this.shops);
+  ImportResult(this.products, this.suppliers, this.shops, {this.received = 0, this.changes});
   final int products, suppliers, shops;
+
+  /// Products in the file (changed or not), and the file's 'changes' mark.
+  final int received;
+  final String? changes;
 }
 
 /// Merges a backup in: what's missing is added; the same product (by id, barcode
@@ -121,5 +131,5 @@ Future<ImportResult> importBackup(Db db, String text) async {
     ]);
     shops++;
   }
-  return ImportResult(products, suppliers, shops);
+  return ImportResult(products, suppliers, shops, received: (m['products'] as List? ?? []).length, changes: m['changes'] as String?);
 }

@@ -31,6 +31,34 @@ void main() {
     await phone.close();
   });
 
+  test('after the first sync only what changed travels, both ways', () async {
+    final pc = await Db.openWith(path: inMemoryDatabasePath, factory: databaseFactoryFfi);
+    for (var i = 0; i < 3; i++) {
+      await pc.saveProduct(CatalogProduct(name: 'Old $i', barcode: '$i'));
+    }
+    await pc.saveShop(Shop(name: 'Iman', address: 'http://100.101.5.2:3000'));
+    final host = await SyncHost.start(pc, port: 0, code: '123456');
+    final phone = await Db.openWith(path: '${Directory.systemTemp.createTempSync('ph').path}/onboard.db', factory: databaseFactoryFfi);
+    final url = 'http://127.0.0.1:${host.port}';
+
+    final first = await syncWith(phone, url, '123456');
+    expect((first.received, first.got.products), (3, 3));
+    final echo = await syncWith(phone, url, '123456', since: first.marks); // hands back what it just took, once
+    expect(echo.received, 0);
+
+    await pc.saveProduct(CatalogProduct(name: 'New on the PC', barcode: '9'));
+    await phone.saveProduct(CatalogProduct(name: 'New on the phone', barcode: '8'));
+    final r = await syncWith(phone, url, '123456', since: echo.marks);
+    expect((r.received, r.got.products, r.sent.products), (1, 1, 1));
+    expect((await pc.products()).length, 5);
+
+    final quiet = await syncWith(phone, url, '123456', since: (await syncWith(phone, url, '123456', since: r.marks)).marks);
+    expect((quiet.received, quiet.got.shops, quiet.sent.products), (0, 0, 0));
+    await host.stop();
+    await pc.close();
+    await phone.close();
+  });
+
   test('five wrong codes close the device for syncing', () async {
     final pc = await Db.openWith(path: '${Directory.systemTemp.createTempSync('pc').path}/onboard.db', factory: databaseFactoryFfi);
     final phone = await Db.openWith(path: '${Directory.systemTemp.createTempSync('ph').path}/onboard.db', factory: databaseFactoryFfi);

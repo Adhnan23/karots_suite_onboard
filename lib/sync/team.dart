@@ -42,6 +42,10 @@ class Peer {
   int port;
   DateTime? lastSync;
   String error = '';
+
+  /// In step up to here: only changes travel after the first sync. Kept in memory,
+  /// so each app start syncs everything once.
+  SyncMarks? marks;
 }
 
 /// Keeps this device the same as the team's others on the same Wi-Fi while the
@@ -138,8 +142,9 @@ class TeamSync extends ChangeNotifier {
     notifyListeners();
     for (final p in peers) {
       try {
-        await syncWith(db, '${p.address}:${p.port}', key);
+        final r = await syncWith(db, '${p.address}:${p.port}', key, since: p.marks);
         p
+          ..marks = r.marks
           ..lastSync = DateTime.now()
           ..error = '';
       } on SyncError catch (e) {

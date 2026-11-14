@@ -48,7 +48,7 @@ class SyncHost {
           }
         } else if (r.method == 'GET' && r.uri.path == '/backup') {
           r.response.headers.contentType = ContentType.json;
-          r.response.write(await exportBackup(db));
+          r.response.write(await exportBackup(db, since: r.uri.queryParameters['since']));
         } else if (r.method == 'POST' && r.uri.path == '/backup') {
           final got = await importBackup(db, await utf8.decodeStream(r));
           r.response.headers.contentType = ContentType.json;
@@ -78,18 +78,29 @@ class SyncHost {
   ];
 }
 
+/// How far two devices are in step: the other's 'changes' mark on what we took
+/// (its clock), and ours on what we sent (our clock). Null: send everything.
+typedef SyncMarks = ({String? got, String? sent});
+
 class SyncResult {
-  SyncResult(this.got, this.sent);
+  SyncResult(this.got, this.sent, this.marks);
   final ImportResult got, sent;
+  final SyncMarks marks;
+
+  /// Products in what the other device sent (all of them, or only its changes).
+  int get received => got.received;
 }
 
-/// Swaps with the device at base (http://ip:port): takes its backup in, sends ours.
-Future<SyncResult> syncWith(Db db, String base, String code) async {
+/// Swaps with the device at base (http://ip:port): takes its backup in, sends
+/// ours. With since (the last result's marks) only what changed travels; an
+/// older app ignores it and sends everything, which merges the same.
+Future<SyncResult> syncWith(Db db, String base, String code, {SyncMarks? since}) async {
   final url = base.contains('://') ? base : 'http://$base';
   final b = Uri.parse(url.endsWith('/') ? url.substring(0, url.length - 1) : url);
   final headers = {'x-sync-code': code.trim()};
-  final mine = await exportBackup(db);
-  final res = await http.get(b.replace(path: '/backup'), headers: headers).timeout(const Duration(minutes: 5)); // a whole catalogue is ~30 MB
+  final sentMark = Db.stamp(); // what changes after this goes next time
+  final mine = await exportBackup(db, since: since?.sent);
+  final res = await http.get(b.replace(path: '/backup', queryParameters: {if (since?.got != null) 'since': since!.got}), headers: headers).timeout(const Duration(minutes: 5)); // a whole catalogue is ~30 MB
   if (res.statusCode == 403) throw SyncError('Wrong code: check the 6 digits on the other device');
   if (res.statusCode != 200) throw SyncError('The other device answered ${res.statusCode}');
   final got = await importBackup(db, utf8.decode(res.bodyBytes));
@@ -102,5 +113,5 @@ Future<SyncResult> syncWith(Db db, String base, String code) async {
       .timeout(const Duration(minutes: 10)); // the other device saves it all before answering
   if (sent.statusCode != 200) throw SyncError('The other device couldn\'t take ours (${sent.statusCode})');
   final m = jsonDecode(sent.body) as Map;
-  return SyncResult(got, ImportResult(m['products'] as int, m['suppliers'] as int, m['shops'] as int));
+  return SyncResult(got, ImportResult(m['products'] as int, m['suppliers'] as int, m['shops'] as int), (got: got.changes ?? since?.got, sent: sentMark));
 }

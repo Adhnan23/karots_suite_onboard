@@ -27,12 +27,15 @@ class Db {
     path ??= p.join((await getApplicationSupportDirectory()).path, 'onboard.db');
     final raw = await f.openDatabase(
       path,
-      options: OpenDatabaseOptions(version: 7, onCreate: (d, _) => _create(d), onUpgrade: _upgrade),
+      options: OpenDatabaseOptions(version: 8, onCreate: (d, _) => _create(d), onUpgrade: _upgrade),
     );
     return Db._(raw);
   }
 
   Future<void> close() => raw.close();
+
+  /// This device's time for changed_at: microseconds, zero-padded, so text order is time order.
+  static String stamp() => DateTime.now().microsecondsSinceEpoch.toString().padLeft(20, '0');
 
   /// Called after each change to the catalogue, suppliers or shops (the team sync listens).
   void Function()? onWrite;
@@ -47,7 +50,7 @@ class Db {
     for (final s in [
       '''CREATE TABLE catalog_products(uid TEXT PRIMARY KEY, name TEXT NOT NULL, name_local TEXT, barcode TEXT, category TEXT,
          unit TEXT, cost TEXT, selling TEXT, wholesale TEXT, tax_rate TEXT, warranty_months INTEGER, track_serial INTEGER,
-         supplier TEXT, kinds TEXT, sources TEXT, updated_at TEXT)''',
+         supplier TEXT, kinds TEXT, sources TEXT, updated_at TEXT, changed_at TEXT)''',
       'CREATE TABLE catalog_barcodes(product_uid TEXT NOT NULL, code TEXT NOT NULL, pos INTEGER)',
       'CREATE INDEX catalog_barcodes_code ON catalog_barcodes(code)',
       'CREATE TABLE catalog_packs(product_uid TEXT NOT NULL, name TEXT, size TEXT, selling TEXT, wholesale TEXT, barcode TEXT, pos INTEGER)',
@@ -55,7 +58,7 @@ class Db {
       '''CREATE TABLE catalog_suppliers(uid TEXT PRIMARY KEY, name TEXT NOT NULL, contact TEXT, phone TEXT, address TEXT,
          credit_days INTEGER, kinds TEXT, sources TEXT)''',
       '''CREATE TABLE shops(uid TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT, address TEXT, install_id TEXT,
-         last_pull TEXT, snapshot TEXT, secret_name TEXT, cost_code TEXT, cost_code_at TEXT)''',
+         last_pull TEXT, snapshot TEXT, secret_name TEXT, cost_code TEXT, cost_code_at TEXT, changed_at TEXT)''',
       '''CREATE TABLE shop_products(shop_uid TEXT NOT NULL, remote_id INTEGER NOT NULL, catalog_uid TEXT, name TEXT,
          barcode TEXT, category TEXT, json TEXT, PRIMARY KEY(shop_uid, remote_id))''',
       'CREATE TABLE review(uid TEXT PRIMARY KEY, shop_uid TEXT, kind TEXT, key TEXT, json TEXT, status TEXT)',
@@ -69,7 +72,7 @@ class Db {
     }
   }
 
-  static const _deletedTable = 'CREATE TABLE deleted(kind TEXT NOT NULL, uid TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY(kind, uid))';
+  static const _deletedTable = 'CREATE TABLE deleted(kind TEXT NOT NULL, uid TEXT NOT NULL, at TEXT NOT NULL, changed_at TEXT, PRIMARY KEY(kind, uid))';
 
   static const _offersTable = '''CREATE TABLE catalog_offers(product_uid TEXT NOT NULL, supplier_uid TEXT NOT NULL, supplier_name TEXT,
        code TEXT, cost TEXT, price TEXT, updated_at TEXT, PRIMARY KEY(product_uid, supplier_uid))''';
@@ -100,27 +103,38 @@ class Db {
       await d.execute('ALTER TABLE shops ADD COLUMN cost_code TEXT');
       await d.execute('ALTER TABLE shops ADD COLUMN cost_code_at TEXT');
     }
+    if (from < 8) {
+      // When a row last changed on this device (any cause, a sync too): the team sync sends only what changed since.
+      for (final t in ['catalog_products', 'shops', 'deleted']) {
+        final cols = await d.rawQuery('PRAGMA table_info($t)'); // none: no such table (a very old test file)
+        if (cols.isNotEmpty && !cols.any((c) => c['name'] == 'changed_at')) await d.execute('ALTER TABLE $t ADD COLUMN changed_at TEXT');
+      }
+    }
   }
 
   // ---- deletions, so they travel to the other devices ----
 
   Future<void> _mark(DatabaseExecutor t, String kind, String uid, [DateTime? at]) =>
-      t.insert('deleted', {'kind': kind, 'uid': uid, 'at': (at ?? DateTime.now()).toIso8601String()}, conflictAlgorithm: ConflictAlgorithm.replace);
+      t.insert('deleted', {'kind': kind, 'uid': uid, 'at': (at ?? DateTime.now()).toIso8601String(), 'changed_at': stamp()}, conflictAlgorithm: ConflictAlgorithm.replace);
 
   /// When each product / supplier / shop was deleted here, by uid.
   Future<Map<String, DateTime>> deletedAt(String kind) async => {
     for (final r in await raw.query('deleted', where: 'kind = ?', whereArgs: [kind])) r['uid'] as String: DateTime.parse(r['at'] as String),
   };
-  Future<List<Map<String, Object?>>> deletions() => raw.query('deleted');
+  /// Every deletion, or only the ones that reached this device after since (a [stamp]).
+  Future<List<Map<String, Object?>>> deletions({String? since}) => since == null
+      ? raw.query('deleted', columns: ['kind', 'uid', 'at'])
+      : raw.query('deleted', columns: ['kind', 'uid', 'at'], where: 'changed_at > ?', whereArgs: [since]);
   Future<void> markDeleted(String kind, String uid, DateTime at) => _mark(raw, kind, uid, at);
 
   /// Many at once (a backup import): one transaction, not one disk write each (34,000 took hours on Windows).
   Future<void> markDeletedAll(List<(String kind, String uid, DateTime at)> list) async {
     if (list.isEmpty) return;
+    final now = stamp();
     await raw.transaction((t) async {
       final b = t.batch();
       for (final (kind, uid, at) in list) {
-        b.insert('deleted', {'kind': kind, 'uid': uid, 'at': at.toIso8601String()}, conflictAlgorithm: ConflictAlgorithm.replace);
+        b.insert('deleted', {'kind': kind, 'uid': uid, 'at': at.toIso8601String(), 'changed_at': now}, conflictAlgorithm: ConflictAlgorithm.replace);
       }
       await b.commit(noResult: true);
     });
@@ -136,10 +150,10 @@ class Db {
     if (list.isEmpty) return;
     await _w(
       raw.transaction((t) async {
-        final b = t.batch();
+        final b = t.batch(), now = stamp();
         for (final x in list) {
           if (touch) x.updatedAt = DateTime.now();
-          b.insert('catalog_products', x.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
+          b.insert('catalog_products', {...x.toRow(), 'changed_at': now}, conflictAlgorithm: ConflictAlgorithm.replace);
           for (final tb in ['catalog_barcodes', 'catalog_packs', 'catalog_fields']) {
             b.delete(tb, where: 'product_uid = ?', whereArgs: [x.uid]);
           }
@@ -240,7 +254,7 @@ class Db {
         ..costCodeJson = got.single['cost_code'] as String? ?? ''
         ..costCodeAt = at;
     }
-    await _w(raw.insert('shops', s.toRow(), conflictAlgorithm: ConflictAlgorithm.replace));
+    await _w(raw.insert('shops', {...s.toRow(), 'changed_at': stamp()}, conflictAlgorithm: ConflictAlgorithm.replace));
   }
   Future<void> deleteShop(String uid) => _w(
     raw.transaction((t) async {
@@ -249,13 +263,16 @@ class Db {
       await _mark(t, 'shop', uid);
     }),
   );
-  Future<List<Shop>> shops() async => [for (final r in await raw.query('shops', orderBy: 'name COLLATE NOCASE')) Shop.fromRow(r)];
+  Future<List<Shop>> shops({String where = '1=1', List<Object?> args = const []}) async => [
+    for (final r in await raw.query('shops', where: where, whereArgs: args, orderBy: 'name COLLATE NOCASE')) Shop.fromRow(r),
+  ];
 
   // ---- a shop's own list, from its last pull ----
 
   Future<void> replaceShopProducts(String shopUid, List<Map<String, Object?>> rows) => _w(
     raw.transaction((t) async {
       await t.delete('shop_products', where: 'shop_uid = ?', whereArgs: [shopUid]);
+      await t.update('shops', {'changed_at': stamp()}, where: 'uid = ?', whereArgs: [shopUid]);
       for (final r in rows) {
         await t.insert('shop_products', {...r, 'shop_uid': shopUid}, conflictAlgorithm: ConflictAlgorithm.replace);
       }
