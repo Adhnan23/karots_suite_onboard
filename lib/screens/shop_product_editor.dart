@@ -100,7 +100,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
   void didChangeDependencies() {
     super.didChangeDependencies();
     AppScope.of(context).db.suppliers().then((x) => mounted ? setState(() => catalogSuppliers = x) : null);
-    if (isNew && supplierChoice == 'none' && d.product.supplier.isNotEmpty) {
+    if (supplierChoice == 'none' && d.product.supplier.isNotEmpty) {
       final hit = _shopSuppliers.where((x) => normName('${x['name']}') == normName(d.product.supplier)).firstOrNull;
       if (hit != null) supplierChoice = 'shop:${hit['id']}';
     }
@@ -140,6 +140,11 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
     if (supplierChoice.startsWith('shop:')) d.supplierId = int.parse(supplierChoice.substring(5));
     if (supplierChoice.startsWith('cat:')) d.newSupplier = catalogSuppliers.firstWhere((x) => x.uid == supplierChoice.substring(4));
     if (supplierChoice.startsWith('new:')) d.newSupplier = CatalogSupplier(name: supplierChoice.substring(4));
+    // The shop's copy remembers the supplier, so the product opens with it again.
+    // None on a change keeps the shop's own (pushUpdate never clears it).
+    if (isNew || supplierChoice != 'none') {
+      d.product.supplier = d.newSupplier?.name ?? (_shopSuppliers.where((x) => (x['id'] as num).toInt() == d.supplierId).firstOrNull?['name'] as String? ?? '');
+    }
     final c = app.session(s);
     setState(() => busy = true);
     try {
