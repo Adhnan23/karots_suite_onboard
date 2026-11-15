@@ -64,6 +64,9 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
   Shop get s => widget.shop;
   bool get isNew => d.remoteId == 0;
 
+  /// Only the shop's New product page goes on to the next (Quick add has its own scan loop).
+  bool get saveNext => isNew && widget.keepDraft;
+
   /// Keeps unsaved New product work as the shop's draft (on leaving, or the app going to the background).
   void _keep() {
     final f = form.currentState;
@@ -108,6 +111,25 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
 
   List<Map> get _shopSuppliers => [for (final x in (s.snapshot['suppliers'] as List? ?? [])) x as Map];
 
+  /// After Save & next: what the last product had, for the next one on the same shelf.
+  ({String category, String unit})? carry;
+
+  /// Save & next: a fresh New product with the last one's category and unit
+  /// (a shop is set up one category at a time).
+  void _startNext(CatalogProduct last) => setState(() {
+    carry = (category: last.category, unit: last.unit);
+    d = Draft(
+      product: newShopProduct(s)
+        ..category = last.category
+        ..unit = last.unit,
+      mode: d.mode,
+    );
+    supplierChoice = 'none';
+    form = GlobalKey<ProductFormState>();
+    stock = GlobalKey<StockEditorState>();
+    restored = false;
+  });
+
   Future<void> pickFromCatalogue() async {
     final all = await AppScope.of(context).db.products();
     if (!mounted) return;
@@ -117,16 +139,20 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
       builder: (_) => _CatalogPick(all: all, kind: s.kind),
     );
     if (p != null) {
+      final now = form.currentState?.read();
       setState(() {
         d = fromCatalogue(p)
           ..mode = d.mode
           ..batches = d.batches;
+        // The catalogue has no categories: keep the one already chosen; after Save & next, the unit too.
+        if (now != null && now.category.isNotEmpty) d.product.category = now.category;
+        if (now != null && carry != null) d.product.unit = now.unit;
         form = GlobalKey<ProductFormState>();
       });
     }
   }
 
-  Future<void> save() async {
+  Future<void> save({bool next = false}) async {
     final app = AppScope.of(context);
     final problem = form.currentState!.problem() ?? stock.currentState?.problem();
     if (problem != null) return toast(context, problem, error: true);
@@ -179,7 +205,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
       }
       if (c != null) app.pushed(s);
       _drop();
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) next ? _startNext(p) : Navigator.pop(context, true);
     } on PushError catch (e) {
       if (!mounted) return;
       if (e.message != stockTakeOff || c == null) return toast(context, e.message, error: true);
@@ -201,7 +227,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
       await app.db.saveShop(s);
       if (mounted) {
         setState(() => busy = false);
-        return save();
+        return save(next: next);
       }
     } catch (e) {
       // Shelf: walked out of the Wi-Fi. Nothing reached the shop yet (or it's a
@@ -211,7 +237,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
         _drop();
         if (mounted) {
           toast(context, 'Out of reach: saved to push when ${s.name} is back');
-          Navigator.pop(context, true);
+          next ? _startNext(p) : Navigator.pop(context, true);
         }
         return;
       }
@@ -296,7 +322,8 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
         ),
         body: Narrow(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+            key: ObjectKey(form), // Save & next starts at the top
+            padding: EdgeInsets.fromLTRB(16, 4, 16, saveNext ? 170 : 110),
             children: [
               if (restored)
                 DraftBar(
@@ -349,12 +376,27 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: busy ? null : save,
-          backgroundColor: c.brand,
-          foregroundColor: c.brandForeground,
-          icon: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.cloud_upload_rounded),
-          label: Text(AppScope.of(context).connected(s) ? (isNew ? 'Put in ${s.name}' : 'Save in ${s.name}') : 'Save to push later'),
+        floatingActionButton: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (saveNext) ...[
+              FloatingActionButton.extended(
+                heroTag: 'save-next',
+                onPressed: busy ? null : () => save(next: true),
+                icon: const Icon(Icons.playlist_add_rounded),
+                label: const Text('Save & next'),
+              ),
+              const SizedBox(height: 10),
+            ],
+            FloatingActionButton.extended(
+              onPressed: busy ? null : save,
+              backgroundColor: c.brand,
+              foregroundColor: c.brandForeground,
+              icon: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.cloud_upload_rounded),
+              label: Text(AppScope.of(context).connected(s) ? (isNew ? 'Put in ${s.name}' : 'Save in ${s.name}') : 'Save to push later'),
+            ),
+          ],
         ),
       ),
     );
