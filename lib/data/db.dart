@@ -42,6 +42,7 @@ class Db {
 
   Future<T> _w<T>(Future<T> f) async {
     final r = await f;
+    _all = null;
     onWrite?.call();
     return r;
   }
@@ -187,7 +188,23 @@ class Db {
     }),
   );
 
+  /// The whole catalogue, read once and kept until the next write: reading 50,000
+  /// products takes seconds on a slow phone, and adding each product to a shop opens it.
+  /// A copy of the list each time; the products are shared, so change a copy, then save.
+  Future<List<CatalogProduct>>? _all;
+
   Future<List<CatalogProduct>> products({String where = '1=1', List<Object?> args = const []}) async {
+    if (where != '1=1' || args.isNotEmpty) return _products(where, args);
+    final f = _all ??= _products(where, args);
+    try {
+      return List.of(await f);
+    } catch (_) {
+      if (identical(_all, f)) _all = null;
+      rethrow;
+    }
+  }
+
+  Future<List<CatalogProduct>> _products(String where, List<Object?> args) async {
     final rows = await raw.query('catalog_products', where: where, whereArgs: args, orderBy: 'name COLLATE NOCASE');
     if (rows.isEmpty) return [];
     final out = {for (final r in rows) r['uid'] as String: CatalogProduct.fromRow(r)};

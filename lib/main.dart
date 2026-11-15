@@ -33,6 +33,7 @@ class _OnboardAppState extends State<OnboardApp> {
     if (app == null) {
       app = AppState(await Db.open(), store, mode);
       await loadDrafts(app!.db);
+      app!.db.products().ignore(); // warm the catalogue while the home screen shows
     }
     await app!.resumeTeam();
     setState(() => open = true);

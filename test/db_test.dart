@@ -77,4 +77,20 @@ void main() {
     expect((await db.shops()).single.secretName, 'Reseller A');
     await db.close();
   });
+
+  test('the whole catalogue is read once and read again after a save or delete', () async {
+    final a = CatalogProduct(name: 'Panadol');
+    await db.saveProduct(a);
+    final first = await db.products();
+    final again = await db.products();
+    expect(identical(first.single, again.single), isTrue); // kept, not read again
+    again.clear(); // a caller's list is its own copy
+    expect(await db.products(), hasLength(1));
+    await db.saveProduct(CatalogProduct(name: 'Amoxil'));
+    expect((await db.products()).map((p) => p.name), ['Amoxil', 'Panadol']);
+    await db.deleteProduct(a.uid);
+    expect((await db.products()).map((p) => p.name), ['Amoxil']);
+    await db.wipe(products: true);
+    expect(await db.products(), isEmpty);
+  });
 }
