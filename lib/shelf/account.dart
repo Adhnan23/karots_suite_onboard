@@ -23,13 +23,7 @@ class ShelfAccount {
   int wrongTries;
   static const maxWrong = 5;
 
-  static Future<ShelfAccount> make({
-    required String address,
-    required String phone,
-    required String name,
-    required String role,
-    required String pin,
-  }) async {
+  static Future<ShelfAccount> make({required String address, required String phone, required String name, required String role, required String pin}) async {
     final salt = base64Encode(SecretKeyData.random(length: 16).bytes);
     return ShelfAccount(address: address, phone: phone, name: name, role: role, pinSalt: salt, pinHash: await hashPin(pin, salt));
   }

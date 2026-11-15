@@ -141,7 +141,18 @@ class _LockScreenState extends State<LockScreen> {
                   ),
                 const SizedBox(height: 18),
                 FilledButton(onPressed: _go, child: const Text('Open')),
-                if (_canUnlock) TextButton.icon(onPressed: _bio, icon: const Icon(Icons.fingerprint), label: Text(Platform.isWindows ? 'Unlock with Windows Hello' : Platform.isLinux ? 'Unlock with your password' : 'Unlock with this phone')),
+                if (_canUnlock)
+                  TextButton.icon(
+                    onPressed: _bio,
+                    icon: const Icon(Icons.fingerprint),
+                    label: Text(
+                      Platform.isWindows
+                          ? 'Unlock with Windows Hello'
+                          : Platform.isLinux
+                          ? 'Unlock with your password'
+                          : 'Unlock with this phone',
+                    ),
+                  ),
               ],
             ),
           ),

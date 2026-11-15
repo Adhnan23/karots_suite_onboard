@@ -30,8 +30,7 @@ bool validPin(List<int> seed, String pin, DateTime now) {
   return pin.trim() == _code(seed, w) || pin.trim() == _code(seed, w - 1);
 }
 
-List<int> _seed(String secret, String installId) =>
-    Hmac(sha256, utf8.encode(secret)).convert(utf8.encode(_label + installId.trim().toUpperCase())).bytes;
+List<int> _seed(String secret, String installId) => Hmac(sha256, utf8.encode(secret)).convert(utf8.encode(_label + installId.trim().toUpperCase())).bytes;
 
 String _code(List<int> seed, int window) {
   final buf = ByteData(8)..setUint64(0, window);

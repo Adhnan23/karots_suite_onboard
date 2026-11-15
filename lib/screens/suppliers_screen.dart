@@ -138,9 +138,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                       return Card(
                         child: ListTile(
                           title: Text(x.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Text(
-                            [x.contact, x.phone, if (x.creditDays > 0) '${x.creditDays} days credit'].where((s) => s.isNotEmpty).join(' · '),
-                          ),
+                          subtitle: Text([x.contact, x.phone, if (x.creditDays > 0) '${x.creditDays} days credit'].where((s) => s.isNotEmpty).join(' · ')),
                           onTap: () async {
                             await Navigator.push(context, MaterialPageRoute(builder: (_) => SupplierPage(supplier: x)));
                             load();
@@ -279,8 +277,7 @@ class _AddPickState extends State<_AddPick> {
           Expanded(
             child: ListView(
               children: [
-                for (final x in list)
-                  ListTile(title: Text(x.name), subtitle: x.phone.isEmpty ? null : Text(x.phone), onTap: () => Navigator.pop(context, x)),
+                for (final x in list) ListTile(title: Text(x.name), subtitle: x.phone.isEmpty ? null : Text(x.phone), onTap: () => Navigator.pop(context, x)),
               ],
             ),
           ),

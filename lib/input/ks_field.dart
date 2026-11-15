@@ -7,8 +7,7 @@ import 'ocr.dart';
 import 'ocr_sheet.dart';
 import 'scan.dart';
 
-/// A text field with "read it from a photo" (and, for a barcode, "scan it") so
-/// nothing has to be typed.
+/// A text field with "scan it" for a barcode and, where asked, "read it from a photo".
 class KsField extends StatelessWidget {
   const KsField({
     super.key,
@@ -24,7 +23,12 @@ class KsField extends StatelessWidget {
     this.errorText,
     this.keyboard,
     this.suggestions = true,
+    this.ocr = false,
   });
+
+  /// Shows "read it from a photo" (a product's name and local name only: the user, 2026-11-15 —
+  /// a barcode is scanned, prices and the rest are typed faster than read).
+  final bool ocr;
 
   /// false: no keyboard suggestions or autocorrect (a box whose text the app rewrites).
   final bool suggestions;
@@ -71,7 +75,7 @@ class KsField extends StatelessWidget {
           children: [
             if (kind == FieldKind.barcode && Platform.isAndroid)
               IconButton(tooltip: 'Scan', icon: const Icon(Icons.qr_code_scanner_rounded), onPressed: () async => _set(await scanBarcode(context))),
-            if (ocr.data == true)
+            if (this.ocr && ocr.data == true)
               IconButton(
                 tooltip: 'Read from a photo',
                 icon: const Icon(Icons.document_scanner_outlined),

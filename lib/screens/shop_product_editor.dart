@@ -5,6 +5,7 @@ import '../data/models.dart';
 import '../sync/search.dart';
 import '../input/cost_code.dart';
 import '../flavor.dart';
+import '../input/shown_fields.dart';
 import '../input/supplier_field.dart';
 import '../state.dart';
 import '../suite/client.dart';
@@ -102,6 +103,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    loadHiddenFields(AppScope.of(context).store).then((_) => mounted ? setState(() {}) : null);
     AppScope.of(context).db.suppliers().then((x) => mounted ? setState(() => catalogSuppliers = x) : null);
     if (supplierChoice == 'none' && d.product.supplier.isNotEmpty) {
       final hit = _shopSuppliers.where((x) => normName('${x['name']}') == normName(d.product.supplier)).firstOrNull;
@@ -337,15 +339,30 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
                     restored = false;
                   }),
                 ),
-              if (editorTools.isNotEmpty) Wrap(spacing: 8, children: [for (final t in editorTools) t(context, s, form)]),
+              Wrap(
+                spacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  for (final t in editorTools) t(context, s, form),
+                  TextButton.icon(
+                    onPressed: () => showFieldsSheet(context, AppScope.of(context).store),
+                    icon: const Icon(Icons.tune_rounded),
+                    label: const Text('Fields'),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
-              ProductForm(
-                key: form,
-                product: d.product,
-                fieldLabels: labels,
-                categories: [for (final n in cats) _path(cats, n as Map)],
-                units: [for (final u in (s.snapshot['units'] as List? ?? [])) '${(u as Map)['abbreviation']}'],
-                costCode: codeFor(s),
+              ValueListenableBuilder(
+                valueListenable: hiddenFields,
+                builder: (_, hidden, _) => ProductForm(
+                  hidden: hidden,
+                  key: form,
+                  product: d.product,
+                  fieldLabels: labels,
+                  categories: [for (final n in cats) _path(cats, n as Map)],
+                  units: [for (final u in (s.snapshot['units'] as List? ?? [])) '${(u as Map)['abbreviation']}'],
+                  costCode: codeFor(s),
+                ),
               ),
               const SizedBox(height: 12),
               Section(

@@ -4,6 +4,7 @@ import 'package:karots_suite_onboard/data/db.dart';
 import 'package:karots_suite_onboard/data/drafts.dart';
 import 'package:karots_suite_onboard/data/models.dart';
 import 'package:karots_suite_onboard/main.dart';
+import 'package:karots_suite_onboard/screens/product_form.dart';
 import 'package:karots_suite_onboard/screens/shop_product_editor.dart';
 import 'package:karots_suite_onboard/settings/secure.dart';
 import 'package:karots_suite_onboard/state.dart';
@@ -50,5 +51,28 @@ void main() {
     await t.pumpWidget(const SizedBox());
     await t.pump(const Duration(seconds: 5));
     await t.runAsync(() => db.close());
+  });
+
+  testWidgets('hidden fields are off the page but keep their values', (t) async {
+    final form = GlobalKey<ProductFormState>();
+    final p = CatalogProduct(name: 'Amoxil', nameLocal: 'ඇමොක්සිල්', wholesale: '90', packs: [Pack(name: 'Card', size: '10')], fields: {'Generic name': 'Amoxicillin'});
+    await t.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProductForm(key: form, product: p, fieldLabels: const ['Generic name'], hidden: {'Local name', 'Wholesale price', 'Packs', 'More details'}),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Local name'), findsNothing);
+    expect(find.text('Wholesale price'), findsNothing);
+    expect(find.text('Generic name'), findsNothing);
+    expect(find.text('Warranty months'), findsOneWidget);
+    final got = form.currentState!.read();
+    expect(got.nameLocal, 'ඇමොක්සිල්');
+    expect(got.wholesale, '90');
+    expect(got.packs.single.size, '10');
+    expect(got.fields['Generic name'], 'Amoxicillin');
   });
 }

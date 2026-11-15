@@ -17,7 +17,16 @@ import 'packs_editor.dart';
 /// The product's own details, shared by the catalogue and a shop's editor. Every
 /// field reads from a photo too. fieldLabels: the custom fields to show.
 class ProductForm extends StatefulWidget {
-  const ProductForm({super.key, required this.product, this.fieldLabels = const [], this.categories, this.units = const [], this.suppliers, this.costCode});
+  const ProductForm({
+    super.key,
+    required this.product,
+    this.fieldLabels = const [],
+    this.categories,
+    this.units = const [],
+    this.suppliers,
+    this.costCode,
+    this.hidden = const {},
+  });
   final CatalogProduct product;
   final List<String> fieldLabels;
 
@@ -32,6 +41,9 @@ class ProductForm extends StatefulWidget {
 
   /// The shop's cost letters (Onboard at a shop; null in the catalogue and Shelf).
   final CostCode? costCode;
+
+  /// Fields switched off on this device (optionalFields); kept offstage, never cleared.
+  final Set<String> hidden;
   @override
   State<ProductForm> createState() => ProductFormState();
 }
@@ -153,6 +165,15 @@ class ProductFormState extends State<ProductForm> {
           },
         );
 
+  /// A field the person may hide: offstage, so what's in it stays and still saves.
+  Widget _opt(String f, List<Widget> w) => Offstage(
+    offstage: widget.hidden.contains(f),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: w),
+  );
+
+  Widget get wholesaleField => KsField(label: 'Wholesale price', controller: wholesale, kind: FieldKind.number);
+  Widget get warrantyField => KsField(label: 'Warranty months', controller: warranty, kind: FieldKind.number);
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -160,16 +181,20 @@ class ProductFormState extends State<ProductForm> {
       Section(
         title: 'Product',
         children: [
-          KsField(label: 'Name', controller: name),
+          KsField(label: 'Name', controller: name, ocr: true),
           const SizedBox(height: 10),
-          KsField(label: 'Local name', controller: local, helper: 'Sinhala or Tamil, as the shop says it'),
-          const SizedBox(height: 10),
+          _opt('Local name', [
+            KsField(label: 'Local name', controller: local, ocr: true, helper: 'Sinhala or Tamil, as the shop says it'),
+            const SizedBox(height: 10),
+          ]),
           KsField(label: 'Barcode', controller: barcode, kind: FieldKind.barcode),
           const SizedBox(height: 10),
-          Text('Other barcodes', style: TextStyle(fontSize: 13, color: KsTokens.of(context).mutedForeground)),
-          const SizedBox(height: 6),
-          BarcodesEditor(key: extra, codes: p.barcodes),
-          const SizedBox(height: 10),
+          _opt('Other barcodes', [
+            Text('Other barcodes', style: TextStyle(fontSize: 13, color: KsTokens.of(context).mutedForeground)),
+            const SizedBox(height: 6),
+            BarcodesEditor(key: extra, codes: p.barcodes),
+            const SizedBox(height: 10),
+          ]),
           if (widget.categories != null) ...[CategoryField(controller: category, paths: widget.categories!), const SizedBox(height: 10)],
           _pick('Unit', unit, widget.units),
           if (widget.suppliers != null) ...[
@@ -183,31 +208,37 @@ class ProductFormState extends State<ProductForm> {
         title: 'Prices',
         children: [
           PriceFields(key: prices, cost: p.cost, selling: p.selling, code: widget.costCode),
-          const SizedBox(height: 10),
-          _pair(
-            KsField(label: 'Wholesale price', controller: wholesale, kind: FieldKind.number),
-            KsField(label: 'Warranty months', controller: warranty, kind: FieldKind.number),
-          ),
+          // Side by side when both show; the controllers keep their values either way.
+          if (!widget.hidden.contains('Wholesale price') || !widget.hidden.contains('Warranty months')) const SizedBox(height: 10),
+          if (!widget.hidden.contains('Wholesale price') && !widget.hidden.contains('Warranty months'))
+            _pair(wholesaleField, warrantyField)
+          else if (!widget.hidden.contains('Wholesale price'))
+            wholesaleField
+          else if (!widget.hidden.contains('Warranty months'))
+            warrantyField,
         ],
       ),
-      const SizedBox(height: 12),
-      Section(
-        title: 'Packs',
-        children: [PacksEditor(key: packs, packs: p.packs)],
-      ),
-      if (fields.isNotEmpty) ...[
+      _opt('Packs', [
         const SizedBox(height: 12),
         Section(
-          title: 'More details',
-          children: [
-            for (final e in fields.entries)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: KsField(label: e.key, controller: e.value),
-              ),
-          ],
+          title: 'Packs',
+          children: [PacksEditor(key: packs, packs: p.packs)],
         ),
-      ],
+      ]),
+      if (fields.isNotEmpty)
+        _opt('More details', [
+          const SizedBox(height: 12),
+          Section(
+            title: 'More details',
+            children: [
+              for (final e in fields.entries)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: KsField(label: e.key, controller: e.value),
+                ),
+            ],
+          ),
+        ]),
     ],
   );
 }

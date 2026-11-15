@@ -35,13 +35,7 @@ ThemeData ksTheme(Brightness b, {bool fonts = true}) {
       margin: EdgeInsets.zero,
       shape: round.copyWith(side: BorderSide(color: c.border)),
     ),
-    appBarTheme: AppBarTheme(
-      backgroundColor: c.background,
-      foregroundColor: c.foreground,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      centerTitle: false,
-    ),
+    appBarTheme: AppBarTheme(backgroundColor: c.background, foregroundColor: c.foreground, elevation: 0, scrolledUnderElevation: 0, centerTitle: false),
     dividerTheme: DividerThemeData(color: c.border, space: 1),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(

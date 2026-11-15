@@ -112,8 +112,7 @@ String shopDefaultUnit(Shop s) {
 }
 
 /// A new product for a shop: starts with the shop's default unit.
-CatalogProduct newShopProduct(Shop s, {String name = '', String barcode = ''}) =>
-    CatalogProduct(name: name, barcode: barcode, unit: shopDefaultUnit(s));
+CatalogProduct newShopProduct(Shop s, {String name = '', String barcode = ''}) => CatalogProduct(name: name, barcode: barcode, unit: shopDefaultUnit(s));
 
 /// The shop's id for the unit (by abbreviation); one it hasn't got is made there.
 Future<int> _unitId(SuiteClient c, Db db, Shop s, String unit) async {
@@ -402,8 +401,7 @@ Future<void> disableInShop(Db db, SuiteClient c, Shop s, int remoteId) async {
 /// Saves the work for when the shop can be reached.
 /// Keeps work for when the shop is in reach; [who] is the Shelf person whose
 /// sign-in will send it ('' in Onboard).
-Future<void> queue(Db db, Shop s, String op, Draft d, {String who = ''}) =>
-    db.addPending(PendingOp(shopUid: s.uid, op: op, data: d.toJson(), who: who));
+Future<void> queue(Db db, Shop s, String op, Draft d, {String who = ''}) => db.addPending(PendingOp(shopUid: s.uid, op: op, data: d.toJson(), who: who));
 
 /// Sends what waited; returns how many are still waiting (each keeps its error).
 Future<int> flushPending(Db db, SuiteClient c, Shop s, {String who = ''}) async {

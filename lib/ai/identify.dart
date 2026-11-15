@@ -121,13 +121,7 @@ Identified parseIdentify(Shop s, String reply) {
       final v = _value(f, values[f['key']]);
       if (v != null) out['${f['label']}'] = v;
     }
-    return Candidate(
-      name: '${c['name'] ?? ''}'.trim(),
-      category: cat,
-      specs: '${c['specs'] ?? ''}',
-      explanation: '${c['explanation'] ?? ''}',
-      fields: out,
-    );
+    return Candidate(name: '${c['name'] ?? ''}'.trim(), category: cat, specs: '${c['specs'] ?? ''}', explanation: '${c['explanation'] ?? ''}', fields: out);
   }
 
   final confident = m['confident'] == true && '${(m['best'] as Map?)?['name'] ?? ''}'.trim().isNotEmpty;

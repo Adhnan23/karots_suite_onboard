@@ -2,9 +2,7 @@ import '../data/models.dart';
 
 /// Words of a text for searching: lower case, split at anything that isn't a
 /// letter or digit and between digits and letters ("500mg" → 500, mg).
-List<String> searchWords(String s) => [
-  for (final m in RegExp(r'\d+|[^\W\d_]+', unicode: true).allMatches(s.toLowerCase())) m[0]!,
-];
+List<String> searchWords(String s) => [for (final m in RegExp(r'\d+|[^\W\d_]+', unicode: true).allMatches(s.toLowerCase())) m[0]!];
 
 class _Hay {
   _Hay(CatalogProduct p)
@@ -24,7 +22,9 @@ List<CatalogProduct> searchProducts(List<CatalogProduct> all, String q) {
   if (words.isEmpty) return List.of(all);
   final hays = [for (final p in all) _hay[p] ??= _Hay(p)];
   // Each distinct product word is checked once per search word, not once per product.
-  final vocab = {for (final h in hays) ...[...h.name, ...h.rest]};
+  final vocab = {
+    for (final h in hays) ...[...h.name, ...h.rest],
+  };
   final kinds = [
     for (final w in words)
       {

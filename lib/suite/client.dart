@@ -140,9 +140,8 @@ class SuiteClient {
 
   // ---- whole-shop reads ----
 
-  Future<String> productsCsv({required bool customFields}) async => utf8.decode(
-    (await _send('GET', '/admin/products/export', query: {'format': 'csv', 'ids': '1', if (customFields) 'extras': 'productplus'})).bodyBytes,
-  );
+  Future<String> productsCsv({required bool customFields}) async =>
+      utf8.decode((await _send('GET', '/admin/products/export', query: {'format': 'csv', 'ids': '1', if (customFields) 'extras': 'productplus'})).bodyBytes);
   Future<String> suppliersCsv() async => utf8.decode((await _send('GET', '/admin/suppliers/export', query: {'format': 'csv'})).bodyBytes);
   Future<Map<int, List<Map>>> allPacks() async {
     final m = await get('/admin/products/packs') as Map;
@@ -234,7 +233,4 @@ class SuiteClient {
 }
 
 /// What a person is told for the refusals they can do something about.
-const _friendly = {
-  'SHELF_NO_ACCESS': 'Ask the owner to give you Karots Shelf (Users page)',
-  'PIN_CHANGE_REQUIRED': "Change your PIN on the shop's PC first",
-};
+const _friendly = {'SHELF_NO_ACCESS': 'Ask the owner to give you Karots Shelf (Users page)', 'PIN_CHANGE_REQUIRED': "Change your PIN on the shop's PC first"};
