@@ -10,7 +10,11 @@ shops and to add to or change running ones as their system user.
   fields, Alternatives and the AI Assistant's settings.
 - **Review:** what a pull found that the catalogue hasn't got: accept, fix or drop.
   Known products (any barcode, or the same name) are skipped.
-- **Catalogue:** search, filter by kind of shop, edit.
+- **Catalogue:** search, filter by kind of shop, edit. **New from the Karots catalogue** (☁ on the Catalogue
+  page) reads the catalogue published online (the catalogue repo's Publish) and offers only the products you
+  haven't got (same words = already here, the catalogue's own rule); you untick any you don't want and press Add.
+  Nothing you have is ever changed. Builds get the address from the suite's `.env` (`make`), the Windows build from
+  the repo secret `KAROTS_CATALOGUE_URL`; without it the button isn't there.
 - **A shop's products:** new (from the catalogue or typed), or changes to one it has:
   supplier (the shop's, the catalogue's, a new one or none), prices, packs, extra
   barcodes, custom fields, and old stock (none, one batch, or several batches each with

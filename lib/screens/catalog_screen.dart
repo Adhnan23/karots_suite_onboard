@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import '../data/drafts.dart';
 import '../data/models.dart';
 import '../state.dart';
+import '../sync/catalogue_online.dart';
 import '../sync/search.dart';
 import '../theme/tokens.dart';
 import '../ui/kit.dart';
 import '../sync/variant.dart';
+import 'catalogue_new_page.dart';
 import 'identify_sheet.dart';
 import 'product_form.dart';
 
@@ -63,7 +65,21 @@ class _CatalogScreenState extends State<CatalogScreen> {
       ),
       body: Column(
         children: [
-          PageHead(title: 'Catalogue', sub: '${all.length} products for every kind of shop'),
+          PageHead(
+            title: 'Catalogue',
+            sub: '${all.length} products for every kind of shop',
+            actions: [
+              if (catalogueAddress.isNotEmpty)
+                IconButton(
+                  tooltip: 'New from the Karots catalogue',
+                  icon: const Icon(Icons.cloud_download_outlined),
+                  onPressed: () async {
+                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const CatalogueNewPage()));
+                    load();
+                  },
+                ),
+            ],
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(

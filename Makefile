@@ -7,6 +7,10 @@
 # (karots-onboard-windows, karots-shelf-windows).
 
 APK := build/app/outputs/flutter-apk
+# Onboard's "New from the Karots catalogue" reads the published catalogue: the suite's UPDATE_BASE_URL/CATALOGUE_DIR
+# (a hidden folder: kept out of the code). Shelf never gets it (it asks the shop's PC).
+SUITE_ENV := $(HOME)/Projects/go/karots-suite/.env
+CATALOGUE := --dart-define=KAROTS_CATALOGUE_URL=$(shell [ -f $(SUITE_ENV) ] && . $(SUITE_ENV) && echo "$$UPDATE_BASE_URL/$$CATALOGUE_DIR" | sed 's:\([^:]\)//*:\1/:g; s:/*$$::')
 BUNDLE := build/linux/x64/release/bundle
 APPS := $(HOME)/.local/share/applications
 
@@ -20,7 +24,7 @@ all: apk linux
 apk: apk-onboard apk-shelf
 
 apk-onboard:
-	flutter build apk --release --flavor onboard -t lib/main.dart
+	flutter build apk --release --flavor onboard -t lib/main.dart $(CATALOGUE)
 	@mkdir -p dist && cp $(APK)/app-onboard-release.apk dist/karots-onboard.apk
 
 apk-shelf:
@@ -31,7 +35,7 @@ linux: linux-onboard linux-shelf
 
 # The bundle folder is shared, so each one is copied out before the next build.
 linux-onboard:
-	flutter build linux --release -t lib/main.dart
+	flutter build linux --release -t lib/main.dart $(CATALOGUE)
 	@rm -rf dist/linux/karots-onboard && mkdir -p dist/linux && cp -r $(BUNDLE) dist/linux/karots-onboard
 	@tar -czf dist/linux/karots-onboard.tar.gz -C dist/linux karots-onboard
 

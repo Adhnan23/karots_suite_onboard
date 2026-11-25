@@ -30,7 +30,10 @@ jobs:
         shell: bash
         run: |
           if [ -n "${{ matrix.shelf }}" ]; then export KS_SHELF=1; fi
-          flutter build windows --release -t ${{ matrix.target }}
+          cat=''
+          # Onboard's New from the Karots catalogue: repo secret KAROTS_CATALOGUE_URL (Shelf never gets it).
+          if [ -z "${{ matrix.shelf }}" ]; then cat="--dart-define=KAROTS_CATALOGUE_URL=${{ secrets.KAROTS_CATALOGUE_URL }}"; fi
+          flutter build windows --release -t ${{ matrix.target }} $cat
       - uses: actions/upload-artifact@v4
         with:
           name: karots-${{ matrix.app }}-windows
