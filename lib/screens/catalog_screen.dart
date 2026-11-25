@@ -9,6 +9,7 @@ import '../theme/tokens.dart';
 import '../ui/kit.dart';
 import '../sync/variant.dart';
 import 'catalogue_new_page.dart';
+import 'catalogue_sync_page.dart';
 import 'identify_sheet.dart';
 import 'product_form.dart';
 
@@ -69,6 +70,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
             title: 'Catalogue',
             sub: '${all.length} products for every kind of shop',
             actions: [
+              IconButton(
+                tooltip: 'Sync with the Catalogue app',
+                icon: const Icon(Icons.sync_alt_rounded),
+                onPressed: () async {
+                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const CatalogueSyncPage()));
+                  load();
+                },
+              ),
               if (catalogueAddress.isNotEmpty)
                 IconButton(
                   tooltip: 'New from the Karots catalogue',

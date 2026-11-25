@@ -15,6 +15,11 @@ shops and to add to or change running ones as their system user.
   haven't got (same words = already here, the catalogue's own rule); you untick any you don't want and press Add.
   Nothing you have is ever changed. Builds get the address from the suite's `.env` (`make`), the Windows build from
   the repo secret `KAROTS_CATALOGUE_URL`; without it the button isn't there.
+  **Sync with the Catalogue app** (⇄ on the Catalogue page; the catalogue repo's `make app`, by IP / Tailscale and
+  its PIN) shows four ticked lists, and nothing moves without a tick: the catalogue's **fixes** to your products
+  (old → new), **your own products** not in the catalogue (move them there, with their selling price and barcodes),
+  your **selling prices and barcodes** to send (never a cost), and the catalogue's prices / barcodes for products
+  that have none. Prices and barcodes stay between Onboard and the Catalogue app: shops never get them.
 - **A shop's products:** new (from the catalogue or typed), or changes to one it has:
   supplier (the shop's, the catalogue's, a new one or none), prices, packs, extra
   barcodes, custom fields, and old stock (none, one batch, or several batches each with
