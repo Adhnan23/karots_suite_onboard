@@ -111,8 +111,15 @@ SyncPlan planSync(List<CatalogProduct> mine, Map<String, Map?> matches) {
     }
 
     diff('Name', p.name, '${c['name'] ?? ''}');
-    diff('Unit', p.unit, '${c['unit'] ?? ''}');
-    diff('Kinds', ([...p.kinds]..sort()).join(', '), _kinds(c['kinds']));
+    // The catalogue's pcs is "unit not known": a more exact unit here stays (as the update files keep it).
+    final unit = '${c['unit'] ?? ''}';
+    if (!(unit == 'pcs' && p.unit.trim().isNotEmpty)) diff('Unit', p.unit, unit);
+    // Kinds only ever grow (Onboard adds a shop's kind on push): a fix only for a kind the catalogue has and this hasn't.
+    final more = [
+      for (final k in _kinds(c['kinds']).split(', '))
+        if (k.isNotEmpty && !p.kinds.contains(k)) k,
+    ];
+    if (more.isNotEmpty) ch.add((what: 'Kinds', mine: ([...p.kinds]..sort()).join(', '), theirs: ({...p.kinds, ...more}.toList()..sort()).join(', ')));
     for (final e in ((c['fields'] as Map?) ?? {}).entries) {
       diff('${e.key}', p.fields['${e.key}'] ?? '', '${e.value}');
     }

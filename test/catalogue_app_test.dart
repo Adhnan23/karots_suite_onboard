@@ -52,6 +52,24 @@ void main() {
     expect(mine.single.updatedAt.isAfter(DateTime(2026)), isTrue, reason: 'the newest, for team sync');
   });
 
+  test('the catalogue\'s pcs (unit not known) never replaces a more exact unit; kinds only grow', () {
+    final mine = [p('Acetamin 60ml'), p('Panadol')..kinds.add('grocery')];
+    final plan = planSync(mine, {
+      'Acetamin 60ml': cat('Acetamin 60ml', unit: 'pcs'),
+      'Panadol': {...cat('Panadol'), 'kinds': 'pharmacy'},
+    });
+    expect(plan.fixes, isEmpty, reason: 'tab stays; pharmacy + grocery is not "fixed" to pharmacy');
+    final more = planSync(
+      [p('Strepsils')],
+      {
+        'Strepsils': {...cat('Strepsils'), 'kinds': 'pharmacy,grocery'},
+      },
+    );
+    expect(more.fixes.single.changes, [(what: 'Kinds', mine: 'pharmacy', theirs: 'grocery, pharmacy')]);
+    final tab = planSync([p('X')..unit = 'pcs'], {'X': cat('X', unit: 'tab')});
+    expect(tab.fixes.single.changes, [(what: 'Unit', mine: 'pcs', theirs: 'tab')], reason: 'a known unit from the catalogue is still offered');
+  });
+
   test('hand-made products not in the catalogue are offered to move; catalogue leftovers are not', () {
     final plan = planSync([p('My own soap', hand: true), p('Old catalogue copy')], {'My own soap': null, 'Old catalogue copy': null});
     expect(plan.handMade.map((x) => x.name), ['My own soap']);
