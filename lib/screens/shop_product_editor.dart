@@ -7,6 +7,7 @@ import '../input/cost_code.dart';
 import '../flavor.dart';
 import '../input/shown_fields.dart';
 import '../input/supplier_field.dart';
+import '../shelf/catalogue_pick.dart';
 import '../state.dart';
 import '../suite/client.dart';
 import '../sync/match.dart';
@@ -133,6 +134,7 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
   });
 
   Future<void> pickFromCatalogue() async {
+    if (isShelf) return pickFromShopCatalogue();
     final all = await AppScope.of(context).db.products();
     if (!mounted) return;
     final p = await showModalBottomSheet<CatalogProduct>(
@@ -152,6 +154,26 @@ class _ShopProductEditorState extends State<ShopProductEditor> with WidgetsBindi
         form = GlobalKey<ProductFormState>();
       });
     }
+  }
+
+  /// Karots Shelf: the shop PC's catalogue (CTL-13); without the Catalogue plugin or off the shop's Wi-Fi it says so.
+  Future<void> pickFromShopCatalogue() async {
+    if (!s.has('catalogue')) return toast(context, needsCataloguePlugin, error: true);
+    final c = AppScope.of(context).session(s);
+    if (c == null) return toast(context, catalogueOutOfReach, error: true);
+    final now = form.currentState?.read();
+    final p = await showModalBottomSheet<Map>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => ShopCataloguePick(client: c, first: now?.name ?? ''),
+    );
+    if (p == null || !mounted) return;
+    setState(() {
+      d = draftFromShopPick(s, p, category: now?.category ?? '')
+        ..mode = d.mode
+        ..batches = d.batches;
+      form = GlobalKey<ProductFormState>();
+    });
   }
 
   Future<void> save({bool next = false}) async {

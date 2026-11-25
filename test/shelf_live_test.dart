@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:karots_suite_onboard/data/db.dart';
 import 'package:karots_suite_onboard/data/models.dart';
 import 'package:karots_suite_onboard/flavor.dart';
+import 'package:karots_suite_onboard/shelf/catalogue_pick.dart';
 import 'package:karots_suite_onboard/suite/client.dart';
 import 'package:karots_suite_onboard/sync/pull.dart';
 import 'package:karots_suite_onboard/sync/push.dart';
@@ -58,6 +59,18 @@ void main() {
     d.product.selling = '125.00';
     await pushUpdate(db, c, s, d);
     expect('${(await c.get('/admin/products/${d.remoteId}') as Map)['sellingPrice']}', '125.00');
+
+    // CTL-13: From catalogue searches the shop PC's copy (a shop with the Catalogue plugin and a copy), and the
+    // product a pick makes is linked to its item.
+    if (s.has('catalogue') && ((await c.get('/x/catalogue/status') as Map)['count'] as num) > 0) {
+      final found = await c.get('/x/catalogue/search', {'q': 'amlodipine'}) as List;
+      expect(found, isNotEmpty);
+      final p = draftFromShopPick(s, found.first as Map)..product.name = 'Shelf pick $tag';
+      await pushCreate(db, c, s, p);
+      final again = (await c.get('/x/catalogue/search', {'q': 'amlodipine'}) as List).firstWhere((x) => (x as Map)['id'] == p.catalogueItem) as Map;
+      expect((again['have'] as Map?)?['id'], p.remoteId, reason: 'the pick is linked: the catalogue says the shop has it');
+      await admin.delete('/admin/products/${p.remoteId}');
+    }
 
     // A second phone can't make a twin of that barcode.
     final twin = Draft(

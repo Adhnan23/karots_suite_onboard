@@ -44,6 +44,7 @@ class Draft {
     this.remoteId = 0,
     this.aiPick,
     this.useProductSupplier = false,
+    this.catalogueItem = 0,
   }) : batches = batches ?? [];
   CatalogProduct product;
   int supplierId, remoteId;
@@ -56,6 +57,9 @@ class Draft {
 
   /// An AI Identify pick, learnt by the shop's AI Assistant on save.
   Map<String, dynamic>? aiPick;
+
+  /// Karots Shelf: the shop's catalogue item this product was picked from (0 = none); it is linked when made.
+  int catalogueItem;
 
   List<StockBatch> get stock => switch (mode) {
     StockMode.none => [],
@@ -70,6 +74,7 @@ class Draft {
     'mode': mode.name,
     'newSupplier': newSupplier?.toRow(),
     'batches': [for (final b in batches) b.toJson()],
+    if (catalogueItem > 0) 'catalogueItem': catalogueItem,
   };
   factory Draft.fromJson(Map m) => Draft(
     product: CatalogProduct.fromJson(m['product'] as Map),
@@ -78,6 +83,7 @@ class Draft {
     mode: StockMode.values.byName('${m['mode'] ?? 'none'}'),
     newSupplier: m['newSupplier'] == null ? null : CatalogSupplier.fromRow(m['newSupplier'] as Map),
     batches: [for (final b in (m['batches'] as List? ?? [])) StockBatch.fromJson(b as Map)],
+    catalogueItem: (m['catalogueItem'] as num? ?? 0).toInt(),
   );
 }
 
@@ -164,9 +170,10 @@ Future<Map<String, Object?>> productBody(Db db, SuiteClient c, Shop s, Draft d, 
         for (final k in p.packs) {'name': k.name, 'size': k.size, 'sellingPrice': k.selling, 'wholesalePrice': k.wholesale, 'barcode': k.barcode},
       ],
     if (create) 'barcodes': p.barcodes,
-    if (values.isNotEmpty)
+    if (values.isNotEmpty || (create && d.catalogueItem > 0))
       'extra': {
-        'productplus': {'values': values},
+        if (values.isNotEmpty) 'productplus': {'values': values},
+        if (create && d.catalogueItem > 0) 'catalogue': {'itemId': d.catalogueItem},
       },
   };
 }
@@ -279,7 +286,15 @@ Future<PushResult> pushCreate(Db db, SuiteClient c, Shop s, Draft d) async {
   final sup = await _supplier(db, c, s, d);
   final body = await productBody(db, c, s, d, sup);
   final first = stock.isEmpty ? null : stock.first;
-  final item = await c.intakeCreate(body, quantity: first?.qty ?? '', expiry: first?.expiry ?? '');
+  Map item;
+  try {
+    item = await c.intakeCreate(body, quantity: first?.qty ?? '', expiry: first?.expiry ?? '');
+  } on SuiteError catch (e) {
+    // A pick saved offline whose item left the shop's copy before it got there: made without the link (CTL-13).
+    if (d.catalogueItem == 0 || !e.message.contains('catalogue product')) rethrow;
+    d.catalogueItem = 0;
+    item = await c.intakeCreate(await productBody(db, c, s, d, sup), quantity: first?.qty ?? '', expiry: first?.expiry ?? '');
+  }
   final id = (item['productId'] as num).toInt();
   d.remoteId = id;
   // Intake makes the product alone: packs and extra barcodes go on after. One
